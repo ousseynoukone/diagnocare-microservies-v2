@@ -15,7 +15,8 @@ import java.io.IOException;
 
 @RequiredArgsConstructor
 public class JwAuthFilter extends OncePerRequestFilter {
-    private final JWTAuthProvider JWTAuthProvider;
+    private final JWTAuthProvider jwtAuthProvider;
+
 
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain) throws ServletException, IOException {
@@ -25,7 +26,7 @@ public class JwAuthFilter extends OncePerRequestFilter {
             if(authElements.length==2  && "Bearer".equals(authElements[0])){
                 try {
                     SecurityContextHolder.getContext().
-                            setAuthentication(JWTAuthProvider.validateToken(authElements[1]));
+                            setAuthentication(jwtAuthProvider.validateToken(authElements[1]));
                 } catch (AppException e) {
                     SecurityContextHolder.clearContext();
 

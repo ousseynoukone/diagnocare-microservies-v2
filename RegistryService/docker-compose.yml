@@ -1,0 +1,20 @@
+version: '3'
+services:
+
+#registry service------------------------------
+
+  registry: # meaning the name of the app
+    build: . # Specify the path to your Spring Boot application Dockerfile
+    restart: always
+    ports:
+      - '8761:8761'
+    env_file:
+      - .env
+    networks:
+      - app-network
+
+
+networks:
+  app-network:
+    external: true
+

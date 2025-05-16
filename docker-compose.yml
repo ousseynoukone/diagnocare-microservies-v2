@@ -1,0 +1,29 @@
+services:
+  postgres:
+    image: postgres:15
+    container_name: diagnocare-db
+    environment:
+      POSTGRES_DB: ${DB_NAME}
+      POSTGRES_USER: ${DB_USERNAME}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USERNAME} -d ${DB_NAME}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  registry: 
+    build: ./RegistryService/.
+    restart: always
+    ports:
+      - '8761:8761'
+    # env_file:
+    #   - .env
+
+volumes:
+  postgres_data:

@@ -22,6 +22,7 @@ import com.auth0.jwt.exceptions.JWTVerificationException;
 import com.auth0.jwt.interfaces.DecodedJWT;
 
 import java.util.*;
+import java.util.stream.Collectors;
 
 
 @Component
@@ -54,11 +55,19 @@ public class JWTAuthProvider {
         Date now = new Date();
         Date validity = new Date(now.getTime() + accessTokenExpiration);
 
+        List<String> roleNames = user.getRoles()
+                .stream()
+                .map(role -> role.getName().name())
+                .collect(Collectors.toList());
+
+
+
+
         // Create the JWT access token
         String token = JWT.create()
                 .withIssuer(user.getEmail())
                 .withClaim("id", user.getId())
-                .withClaim("roles", user.getRoles())
+                .withClaim("roles", roleNames)
                 .withIssuedAt(now)
                 .withExpiresAt(validity)
                 .sign(Algorithm.HMAC256(secretKey));
@@ -75,10 +84,15 @@ public class JWTAuthProvider {
         Date now = new Date();
         Date validity = new Date(now.getTime() + refreshTokenExpiration);
 
+        List<String> roleNames = user.getRoles()
+                .stream()
+                .map(role -> role.getName().name())
+                .collect(Collectors.toList());
+
         String refreshToken = JWT.create()
                 .withIssuer(user.getEmail())
                 .withClaim("id", user.getId())
-                .withClaim("roles", user.getRoles())
+                .withClaim("roles", roleNames)
                 .withIssuedAt(now)
                 .withExpiresAt(validity)
                 .withClaim("tokenType", "refresh")
