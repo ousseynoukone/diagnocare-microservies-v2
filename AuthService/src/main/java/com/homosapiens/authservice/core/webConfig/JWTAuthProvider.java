@@ -45,11 +45,6 @@ public class JWTAuthProvider {
     @Autowired
     private CustomUserDetailsService customUserDetails;
 
-    @PostConstruct
-    protected void init() {
-        secretKey = Base64.getEncoder().encodeToString(secretKey.getBytes());
-        refreshSecretKey = Base64.getEncoder().encodeToString(refreshSecretKey.getBytes());
-    }
 
     public Map<String, Object> createToken(CustomUserDetails user) {
         Date now = new Date();
@@ -107,17 +102,20 @@ public class JWTAuthProvider {
 
 
     public Authentication validateToken(String token) {
+
         try {
             Algorithm algorithm = Algorithm.HMAC256(secretKey);
             JWTVerifier verifier = JWT.require(algorithm).build();
             DecodedJWT decoded = verifier.verify(token);
 
+
+
             // Check if token is expired
             if (decoded.getExpiresAt().before(new Date())) {
                 throw new AppException(HttpStatus.UNAUTHORIZED,"Token has expired. Please login again.");
             }
+            List<String> roles = decoded.getClaim("roles").asList(String.class);
 
-            List<Role> roles = decoded.getClaim("roles").asList(Role.class);
             if (roles == null) {
                 roles = new ArrayList<>();
             }
@@ -125,15 +123,16 @@ public class JWTAuthProvider {
             userData.put("id", decoded.getClaim("id").asLong());
             userData.put("email", decoded.getIssuer());
             userData.put("roles", roles);
-            UserDetails userDetails = customUserDetails.loadUserByUsername(decoded.getSubject());
+            UserDetails userDetails = customUserDetails.loadUserByUsername(decoded.getIssuer());
 
             return new UsernamePasswordAuthenticationToken(userData, userDetails.getPassword(), userDetails.getAuthorities());
         } catch (JWTVerificationException e) {
-            throw new AppException( HttpStatus.UNAUTHORIZED,"Invalid token. Please provide a valid token.");
+            throw new AppException( HttpStatus.UNAUTHORIZED,e.getMessage());
         }
     }
 
     public Authentication validateRefreshToken(String refreshToken) {
+        System.out.println(refreshToken);
         try {
             Algorithm algorithm = Algorithm.HMAC256(refreshSecretKey);
             JWTVerifier verifier = JWT.require(algorithm).build();
@@ -150,15 +149,16 @@ public class JWTAuthProvider {
                 throw new AppException(HttpStatus.UNAUTHORIZED,"Invalid token type. Please provide a refresh token.");
             }
 
-            List<Role> roles = decoded.getClaim("roles").asList(Role.class);
+            List<String> roles = decoded.getClaim("roles").asList(String.class);
             if (roles == null) {
                 roles = new ArrayList<>();
             }
+
             Map<String, Object> userData = new HashMap<>();
             userData.put("id", decoded.getClaim("id").asLong());
             userData.put("email", decoded.getIssuer());
             userData.put("roles", roles);
-            UserDetails userDetails = customUserDetails.loadUserByUsername(decoded.getSubject());
+            UserDetails userDetails = customUserDetails.loadUserByUsername(decoded.getIssuer());
 
             return new UsernamePasswordAuthenticationToken(userData, userDetails.getPassword(), userDetails.getAuthorities());
         } catch (JWTVerificationException e) {

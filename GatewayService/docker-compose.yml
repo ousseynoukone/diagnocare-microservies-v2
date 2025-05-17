@@ -1,0 +1,20 @@
+services:
+
+#Gateway service------------------------------
+
+  gateway: # meaning the name of the app
+    build: . # Specify the path to your Spring Boot application Dockerfile
+    restart: always
+    ports:
+      - '8765:8765'
+
+    environment:
+      - eureka.client.serviceUrl.defaultZone=http://registry:8761/eureka/
+
+    networks:
+      - app-network
+
+networks:
+  app-network:
+    external: true
+

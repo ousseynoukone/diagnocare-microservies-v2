@@ -29,12 +29,16 @@ public class JwAuthFilter extends OncePerRequestFilter {
                             setAuthentication(jwtAuthProvider.validateToken(authElements[1]));
                 } catch (AppException e) {
                     SecurityContextHolder.clearContext();
-
-                    throw  new AppException(HttpStatus.UNAUTHORIZED,e.getMessage());
+                    response.setStatus(HttpStatus.UNAUTHORIZED.value());
+                    response.setContentType("application/json");
+                    response.getWriter().write("{\"error\": \"" + e.getMessage() + "\"}");
+                    return;
                 } catch (Exception e) {
                     SecurityContextHolder.clearContext();
-                    throw  new AppException(HttpStatus.INTERNAL_SERVER_ERROR,e.getMessage());
-
+                    response.setStatus(HttpStatus.INTERNAL_SERVER_ERROR.value());
+                    response.setContentType("application/json");
+                    response.getWriter().write("{\"error\": \"" + e.getMessage() + "\"}");
+                    return;
                 }
             }
         }

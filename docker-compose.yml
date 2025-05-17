@@ -17,13 +17,41 @@ services:
       timeout: 5s
       retries: 5
 
-  registry: 
+  registry-service: 
     build: ./RegistryService/.
     restart: always
     ports:
       - '8761:8761'
     # env_file:
     #   - .env
+
+  auth-service:
+    build: ./AuthService/.
+    restart: always
+    ports:
+      - '8081:8081'
+    env_file:
+      - .env
+    environment:
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://postgres:5432/${DB_NAME}
+      - eureka.client.serviceUrl.defaultZone=http://registry-service:8761/eureka/
+
+    depends_on:
+      - postgres
+      - registry-service
+
+
+  gateway-service:
+    build: ./GatewayService/.
+    restart: always
+    ports:
+      - '8765:8765'
+    env_file:
+      - .env
+    environment:
+      - eureka.client.serviceUrl.defaultZone=http://registry-service:8761/eureka/
+    depends_on:
+      - auth-service
 
 volumes:
   postgres_data:
