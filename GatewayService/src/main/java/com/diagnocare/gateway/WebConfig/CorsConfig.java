@@ -15,8 +15,8 @@ public class CorsConfig {
     public CorsWebFilter corsWebFilter() {
         CorsConfiguration corsConfig = new CorsConfiguration();
         corsConfig.setAllowedOrigins(Arrays.asList("*"));
-        corsConfig.addAllowedHeader("*"); // You can customize the allowed headers as needed
-        corsConfig.addAllowedMethod("*"); // You can customize the allowed methods as needed
+        corsConfig.addAllowedHeader("*");
+        corsConfig.addAllowedMethod("*");
 
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         source.registerCorsConfiguration("/**", corsConfig);

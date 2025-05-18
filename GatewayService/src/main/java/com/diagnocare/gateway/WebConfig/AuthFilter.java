@@ -2,6 +2,7 @@ package com.diagnocare.gateway.WebConfig;
 
 import com.diagnocare.gateway.Dto.UserDto;
 import com.diagnocare.gateway.config.AuthServiceException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 import lombok.extern.slf4j.Slf4j;
@@ -15,6 +16,9 @@ import org.springframework.http.MediaType;
 import org.springframework.stereotype.Component;
 import org.springframework.web.reactive.function.client.WebClient;
 import reactor.core.publisher.Mono;
+
+import java.util.HashMap;
+import java.util.Map;
 
 @Slf4j
 @EqualsAndHashCode(callSuper = true)
@@ -34,6 +38,9 @@ public class AuthFilter extends AbstractGatewayFilterFactory<AuthFilter.Config> 
         super(Config.class);
         this.webClientBuilder = webClientBuilder;
     }
+
+    private final ObjectMapper objectMapper = new ObjectMapper();
+
 
     @Override
     public GatewayFilter apply(Config config) {
@@ -110,12 +117,22 @@ public class AuthFilter extends AbstractGatewayFilterFactory<AuthFilter.Config> 
 
     private Mono<Void> createErrorResponse(org.springframework.web.server.ServerWebExchange exchange,
                                            HttpStatus status, String message) {
-        exchange.getResponse().setStatusCode(status);
-        exchange.getResponse().getHeaders().setContentType(MediaType.APPLICATION_JSON);
-        String responseBody = String.format("{\"status\": %d, \"message\": \"%s\"}", status.value(), message);
-        return exchange.getResponse().writeWith(Mono.just(exchange.getResponse()
-                .bufferFactory()
-                .wrap(responseBody.getBytes())));
+        var response = exchange.getResponse();
+        response.setStatusCode(status);
+        response.getHeaders().setContentType(MediaType.APPLICATION_JSON);
+
+        Map<String, Object> responseBodyMap = new HashMap<>();
+        responseBodyMap.put("status", status.value());
+        responseBodyMap.put("message", message);
+
+        try {
+            byte[] bytes = objectMapper.writeValueAsBytes(responseBodyMap);
+            return response.writeWith(Mono.just(response.bufferFactory().wrap(bytes)));
+        } catch (Exception e) {
+            log.error("Failed to serialize error response", e);
+            response.setStatusCode(HttpStatus.INTERNAL_SERVER_ERROR);
+            return response.setComplete();
+        }
     }
 
     public static class Config {
