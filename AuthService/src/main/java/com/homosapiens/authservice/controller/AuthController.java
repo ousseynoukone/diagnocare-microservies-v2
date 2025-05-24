@@ -2,6 +2,8 @@ package com.homosapiens.authservice.controller;
 
 import com.homosapiens.authservice.core.exception.AppException;
 import com.homosapiens.authservice.core.exception.entity.CustomResponseEntity;
+import com.homosapiens.authservice.core.kafka.KafkaProducer;
+import com.homosapiens.authservice.core.kafka.eventEnums.KafkaEvent;
 import com.homosapiens.authservice.model.User;
 import com.homosapiens.authservice.model.dtos.RefreshTokenRequest;
 import com.homosapiens.authservice.model.dtos.UserLoginDto;
@@ -11,6 +13,7 @@ import com.homosapiens.authservice.service.helpers.ValidationHelper;
 import io.swagger.v3.oas.annotations.Parameter;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpHeaders;
 import org.springframework.validation.FieldError;
 import org.springframework.http.HttpStatus;
@@ -27,6 +30,7 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class AuthController {
     private final AuthService authService;
+    private final KafkaProducer kafkaProducer;
 
     @PostMapping("login")
     private ResponseEntity<?> login(@RequestBody @Valid UserLoginDto user , BindingResult bindingResult) {
@@ -53,8 +57,13 @@ public class AuthController {
         }
 
         if(user!=null){
-                Object response =  this.authService.register(user);
-                return ResponseEntity.status(HttpStatus.CREATED).body(response);
+            Object response =  this.authService.register(user);
+            // Isssue the kafka event with the payload
+            kafkaProducer.sendMessage(
+                    KafkaEvent.USER_REGISTERED.name(),
+                    "User have been regsited!",
+                    user);
+            return ResponseEntity.status(HttpStatus.CREATED).body(response);
 
 
 

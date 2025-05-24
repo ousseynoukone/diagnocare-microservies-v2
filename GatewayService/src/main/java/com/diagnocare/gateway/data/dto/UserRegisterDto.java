@@ -1,4 +1,4 @@
-package com.homosapiens.authservice.model.dtos;
+package com.diagnocare.gateway.data.dto;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import jakarta.validation.constraints.*;

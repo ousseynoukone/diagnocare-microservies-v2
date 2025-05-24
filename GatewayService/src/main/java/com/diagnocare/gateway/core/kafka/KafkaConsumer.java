@@ -1,21 +1,32 @@
-package com.homosapiens.authservice.core.kafka;
+package com.diagnocare.gateway.core.kafka;
+
+import com.diagnocare.gateway.data.dto.UserRegisterDto;
+import com.diagnocare.gateway.core.kafka.eventEnums.KafkaEvent;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import org.apache.kafka.clients.consumer.ConsumerRecord;
+import org.springframework.kafka.annotation.KafkaListener;
+import org.springframework.stereotype.Component;
+
 import java.util.logging.Logger;
 
-import lombok.RequiredArgsConstructor;
-import org.springframework.kafka.core.KafkaTemplate;
-import org.springframework.stereotype.Service;
+@Component
+public class KafkaConsumer {
+    private final Logger logger = Logger.getLogger(KafkaConsumer.class.getName());
+    private final ObjectMapper objectMapper = new ObjectMapper();
 
-@Service
-@RequiredArgsConstructor
-public class KafkaProducer {
-    private final KafkaTemplate<String, String> kafkaTemplate;
-    private final String TOPIC_NAME= "edgerunners";
-    private final Logger logger = Logger.getLogger(KafkaProducer.class.getName());
+    @KafkaListener(topics = "USER_REGISTERED", groupId = "test")
+    public void onUserRegisterConsumer(ConsumerRecord<String, String> record) {
+        String key = record.key();
+        String message = record.value();
 
-    public void sendMessage(String message) {
-        kafkaTemplate.send(TOPIC_NAME, message);
+        logger.info("Received key: " + key);
+        logger.info("Received raw message: " + message);
 
-        logger.info("Message " + message + " has been successfully sent to the topic: " + TOPIC_NAME);
-
+        try {
+            UserRegisterDto dto = objectMapper.readValue(message, UserRegisterDto.class);
+            logger.info("Parsed DTO: " + dto.toString());
+        } catch (Exception e) {
+            logger.severe("Failed to deserialize message: " + e.getMessage());
+        }
     }
 }

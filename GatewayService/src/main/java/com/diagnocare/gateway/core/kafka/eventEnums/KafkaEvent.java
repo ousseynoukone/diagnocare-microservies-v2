@@ -1,4 +1,4 @@
-package com.homosapiens.authservice.core.kafka.eventEnums;
+package com.diagnocare.gateway.core.kafka.eventEnums;
 
 public enum KafkaEvent {
     USER_REGISTERED,
