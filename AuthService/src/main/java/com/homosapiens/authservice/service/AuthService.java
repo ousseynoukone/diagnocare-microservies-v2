@@ -54,6 +54,10 @@ public class AuthService {
     }
 
     public User register(UserRegisterDto user) {
+        User existingUser = userRepository.findUserByEmail(user.getEmail());
+        if (existingUser != null) {
+            throw new AppException(HttpStatus.CONFLICT, "Email already in use");
+        }
         user.setPassword(passwordEncoder.encode(user.getPassword()));
 
         Role role = roleRepository.findById(user.getRoleId())
