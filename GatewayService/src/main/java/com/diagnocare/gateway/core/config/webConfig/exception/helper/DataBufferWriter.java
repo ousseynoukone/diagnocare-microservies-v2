@@ -1,4 +1,4 @@
-package com.diagnocare.gateway.WebConfig.exception.helper;
+package com.diagnocare.gateway.core.config.webConfig.exception.helper;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;

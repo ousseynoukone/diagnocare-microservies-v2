@@ -1,4 +1,4 @@
-package com.diagnocare.gateway.Dto;
+package com.diagnocare.gateway.data.dto;
 
 import lombok.Data;
 

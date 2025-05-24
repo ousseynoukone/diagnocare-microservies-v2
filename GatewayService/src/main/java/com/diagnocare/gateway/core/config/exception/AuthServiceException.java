@@ -1,4 +1,4 @@
-package com.diagnocare.gateway.config;
+package com.diagnocare.gateway.core.config.exception;
 
 import org.springframework.http.HttpStatus;
 

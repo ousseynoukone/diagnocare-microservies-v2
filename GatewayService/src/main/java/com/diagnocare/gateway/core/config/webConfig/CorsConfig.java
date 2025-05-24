@@ -1,4 +1,4 @@
-package com.diagnocare.gateway.WebConfig;
+package com.diagnocare.gateway.core.config.webConfig;
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;

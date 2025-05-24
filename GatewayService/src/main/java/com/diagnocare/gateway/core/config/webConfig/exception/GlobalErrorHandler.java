@@ -1,12 +1,10 @@
-package com.diagnocare.gateway.WebConfig.exception;
+package com.diagnocare.gateway.core.config.webConfig.exception;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.cloud.gateway.support.NotFoundException;
 import reactor.core.publisher.Mono;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-
-import java.io.IOException;
 
 import org.springframework.boot.web.reactive.error.ErrorWebExceptionHandler;
 import org.springframework.context.annotation.Configuration;

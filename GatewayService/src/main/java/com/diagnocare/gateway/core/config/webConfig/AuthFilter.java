@@ -1,7 +1,7 @@
-package com.diagnocare.gateway.WebConfig;
+package com.diagnocare.gateway.core.config.webConfig;
 
-import com.diagnocare.gateway.Dto.UserDto;
-import com.diagnocare.gateway.config.AuthServiceException;
+import com.diagnocare.gateway.data.dto.UserDto;
+import com.diagnocare.gateway.core.config.exception.AuthServiceException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
