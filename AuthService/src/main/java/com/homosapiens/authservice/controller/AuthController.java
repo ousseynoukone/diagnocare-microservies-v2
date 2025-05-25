@@ -30,7 +30,6 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class AuthController {
     private final AuthService authService;
-    private final KafkaProducer kafkaProducer;
 
     @PostMapping("login")
     private ResponseEntity<?> login(@RequestBody @Valid UserLoginDto user , BindingResult bindingResult) {
@@ -58,11 +57,6 @@ public class AuthController {
 
         if(user!=null){
             Object response =  this.authService.register(user);
-            // Isssue the kafka event with the payload
-            kafkaProducer.sendMessage(
-                    KafkaEvent.USER_REGISTERED.name(),
-                    "User have been regsited!",
-                    user);
             return ResponseEntity.status(HttpStatus.CREATED).body(response);
 
 

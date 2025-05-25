@@ -9,7 +9,7 @@ import org.springframework.stereotype.Component;
 
 import java.util.logging.Logger;
 
-@Component
+//@Component
 public class KafkaConsumer {
     private final Logger logger = Logger.getLogger(KafkaConsumer.class.getName());
     private final ObjectMapper objectMapper = new ObjectMapper();
