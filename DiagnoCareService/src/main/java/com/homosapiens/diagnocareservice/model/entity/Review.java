@@ -1,7 +1,10 @@
 package com.homosapiens.diagnocareservice.model.entity;
 
+import com.homosapiens.diagnocareservice.core.exception.AppException;
 import jakarta.persistence.*;
 import lombok.Data;
+import org.springframework.http.HttpStatus;
+
 import java.time.LocalDateTime;
 
 @Data
@@ -20,6 +23,15 @@ public class Review {
     private LocalDateTime reviewDate;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "doctor_id")
+    @JoinColumn(name = "user_id")
     private User doctor;
+
+    @PrePersist
+    @PreUpdate
+    private void validateUserRole() {
+        if (this.doctor == null || this.doctor.getRole() == Role.DOCTOR) {
+            throw new AppException(HttpStatus.BAD_REQUEST,"User need to be a doctor ");
+        }
+
+    }
 } 

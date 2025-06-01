@@ -29,14 +29,14 @@ public class Clinic {
 
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "user_id")
+    @JoinColumn(name = "user_id", nullable = true)
     private User user;
 
-    @PrePersist
-    @PreUpdate
-    private void validateUserRole() {
-        if (user == null || user.getRole() != Role.DOCTOR) {
-            throw new IllegalStateException("Clinic must be associated with a doctor");
-        }
-    }
+//    @PrePersist
+//    @PreUpdate
+//    private void validateUserRole() {
+//        if (user == null || user.getRole() != Role.DOCTOR) {
+//            throw new IllegalStateException("Clinic must be associated with a doctor");
+//        }
+//    }
 }

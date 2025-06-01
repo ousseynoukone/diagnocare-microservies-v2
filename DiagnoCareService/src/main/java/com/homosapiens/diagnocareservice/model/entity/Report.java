@@ -1,5 +1,6 @@
 package com.homosapiens.diagnocareservice.model.entity;
 
+import com.homosapiens.diagnocareservice.model.entity.appointment.Appointment;
 import jakarta.persistence.*;
 import lombok.Data;
 import java.time.LocalDateTime;
