@@ -6,6 +6,9 @@ import com.homosapiens.diagnocareservice.model.entity.appointment.AppointmentTyp
 import com.homosapiens.diagnocareservice.service.AppointmentService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.web.PageableDefault;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -26,8 +29,8 @@ public class AppointmentController {
     }
 
     @GetMapping
-    public ResponseEntity<List<Appointment>> getAllAppointments() {
-        return ResponseEntity.ok(appointmentService.findAllAppointments());
+    public ResponseEntity<Page<Appointment>> getAllAppointments( @PageableDefault(size = 5, sort = "name")  Pageable pageable) {
+        return ResponseEntity.ok(appointmentService.findAllAppointments(pageable));
     }
 
     @GetMapping("/{id}")

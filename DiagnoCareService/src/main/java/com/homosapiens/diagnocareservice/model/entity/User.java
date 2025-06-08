@@ -26,9 +26,6 @@ public class User {
     private String email;
 
     @Column(length = 255)
-    private String password;
-
-    @Column(length = 255)
     private String address;
 
     @Column(length = 13)

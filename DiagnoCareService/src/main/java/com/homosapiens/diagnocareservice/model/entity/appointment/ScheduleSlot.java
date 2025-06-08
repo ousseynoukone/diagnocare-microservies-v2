@@ -1,6 +1,7 @@
 package com.homosapiens.diagnocareservice.model.entity.appointment;
 
 import com.homosapiens.diagnocareservice.model.entity.availability.Availability;
+import com.homosapiens.diagnocareservice.model.entity.availability.WeekDay;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.NotNull;
 import lombok.Data;
@@ -29,6 +30,9 @@ public class ScheduleSlot {
     private boolean isAvailable;
 
 
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(name = "week_day_id", nullable = false)
+    private WeekDay weekDay;
 
 
 

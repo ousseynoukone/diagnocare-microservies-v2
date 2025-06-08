@@ -7,6 +7,7 @@ import jakarta.validation.constraints.Future;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotNull;
 import lombok.Data;
+import lombok.EqualsAndHashCode;
 import org.springframework.http.HttpStatus;
 
 import java.time.LocalDate;
@@ -15,6 +16,8 @@ import java.time.LocalTime;
 @Data
 @Entity
 @Table(name = "weekdays")
+@EqualsAndHashCode(exclude = "availability")
+
 public class WeekDay {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -34,10 +37,12 @@ public class WeekDay {
     @Min(value = 10, message = "Slot duration must be at least 10 minutes")
     private Integer slotDuration;
 
-    @NotNull(message = "Availability is required")
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "availability_id")
-    private Availability availability;
+
+
+//    @NotNull(message = "Availability is required")
+//    @ManyToOne(fetch = FetchType.LAZY)
+//    @JoinColumn(name = "availability_id")
+//    private Availability availability;
 
 
     @PrePersist
@@ -50,12 +55,3 @@ public class WeekDay {
 }
 
 
-enum DaysOfWeek {
-    MONDAY,
-    TUESDAY,
-    WEDNESDAY,
-    THURSDAY,
-    FRIDAY,
-    SATURDAY,
-    SUNDAY
-}

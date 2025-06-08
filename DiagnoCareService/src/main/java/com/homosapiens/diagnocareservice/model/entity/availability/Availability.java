@@ -7,9 +7,12 @@ import jakarta.validation.constraints.Future;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotNull;
 import lombok.Data;
+import org.springframework.data.annotation.CreatedDate;
+import org.springframework.data.annotation.LastModifiedDate;
 import org.springframework.http.HttpStatus;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.util.HashSet;
 import java.util.Set;
@@ -32,7 +35,16 @@ public class Availability {
     @Future(message = "Repeat until date must be in the future")
     private LocalDate repeatUntil;
 
+    @CreatedDate
+    @Column(updatable = false)
+    private LocalDateTime createdAt;
+
+    @LastModifiedDate
+    private LocalDateTime updatedAt;
+
+
     @OneToMany
+
     private Set<WeekDay> weekDays = new HashSet<>();
 
     @NotNull(message = "User is required")
