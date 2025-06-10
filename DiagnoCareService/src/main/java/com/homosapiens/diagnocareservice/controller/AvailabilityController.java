@@ -20,8 +20,8 @@ public class AvailabilityController {
     private AvailabilityService availabilityService;
 
     @GetMapping
-    public ResponseEntity<Page<AvailabilityResponseDto>> getAllAvailability(@PageableDefault Pageable pageable) {
-        return ResponseEntity.ok(availabilityService.getAllAvailability(pageable)) ;
+    public ResponseEntity<Page<AvailabilityResponseDto>> getAllAvailability(@PageableDefault(size = 5, sort = "createdAt") Pageable pageable) {
+        return ResponseEntity.ok(availabilityService.getAllAvailability(pageable));
     }
 
     @PostMapping

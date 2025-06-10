@@ -3,6 +3,11 @@ package com.homosapiens.diagnocareservice.model.entity.appointment;
 import com.homosapiens.diagnocareservice.model.entity.User;
 import jakarta.persistence.*;
 import lombok.Data;
+import org.aspectj.weaver.patterns.ConcreteCflowPointcut;
+import org.springframework.data.annotation.CreatedDate;
+import org.springframework.data.annotation.LastModifiedDate;
+
+import java.time.Instant;
 import java.time.LocalDateTime;
 
 @Data
@@ -21,8 +26,9 @@ public class Appointment {
     @JoinColumn(name = "patient_id")
     private User patient;
 
-    private LocalDateTime startTime;
-    private LocalDateTime endTime;
+    @OneToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "slot_id", unique = true)
+    private ScheduleSlot slot;
     
     @Column(columnDefinition = "TEXT")
     private String reason;
@@ -30,8 +36,11 @@ public class Appointment {
     @Enumerated(EnumType.STRING)
     private AppointmentType appointmentType;
 
-    @Column(columnDefinition = "TEXT")
-    private String appointmentDate;
+    @CreatedDate
+    private LocalDateTime createdAt;
+
+    @LastModifiedDate
+    private LocalDateTime  updatedAt;
 
     @Enumerated(EnumType.STRING)
     private AppointmentStatus status;

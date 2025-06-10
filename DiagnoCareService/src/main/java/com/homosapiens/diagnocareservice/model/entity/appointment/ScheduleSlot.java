@@ -34,6 +34,9 @@ public class ScheduleSlot {
     @JoinColumn(name = "week_day_id", nullable = false)
     private WeekDay weekDay;
 
+    @OneToOne(fetch = FetchType.LAZY)
+    private Appointment appointment;
+
 
 
 

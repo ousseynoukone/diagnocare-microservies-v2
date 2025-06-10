@@ -4,8 +4,15 @@ import com.homosapiens.diagnocareservice.core.exception.AppException;
 import com.homosapiens.diagnocareservice.model.entity.appointment.Appointment;
 import com.homosapiens.diagnocareservice.model.entity.appointment.AppointmentStatus;
 import com.homosapiens.diagnocareservice.model.entity.appointment.AppointmentType;
+import com.homosapiens.diagnocareservice.model.entity.appointment.ScheduleSlot;
+import com.homosapiens.diagnocareservice.model.entity.User;
+import com.homosapiens.diagnocareservice.model.entity.dtos.AppointmentRequestDto;
+import com.homosapiens.diagnocareservice.model.entity.dtos.AppointmentResponseDto;
+import com.homosapiens.diagnocareservice.model.mapper.AppointmentMapper;
 import com.homosapiens.diagnocareservice.repository.AppointmentRepository;
+import com.homosapiens.diagnocareservice.repository.ScheduleSlotRepository;
 import com.homosapiens.diagnocareservice.service.AppointmentService;
+import com.homosapiens.diagnocareservice.service.UserService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -13,38 +20,64 @@ import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.time.LocalDateTime;
+import java.time.LocalTime;
 import java.util.List;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
 @Transactional
 public class AppointmentServiceImpl implements AppointmentService {
     private final AppointmentRepository appointmentRepository;
+    private final AppointmentMapper appointmentMapper;
+    private final UserService userService;
+    private final ScheduleSlotRepository scheduleSlotRepository;
 
     @Override
-    public Appointment createAppointment(Appointment appointment) {
+    public AppointmentResponseDto createAppointment(AppointmentRequestDto requestDto) {
+        User doctor = userService.getUserById(requestDto.getDoctorId())
+                .orElseThrow(() -> new AppException(HttpStatus.NOT_FOUND, "Doctor not found"));
+        User patient = userService.getUserById(requestDto.getPatientId())
+                .orElseThrow(() -> new AppException(HttpStatus.NOT_FOUND, "Patient not found"));
+        ScheduleSlot slot = scheduleSlotRepository.findById(requestDto.getScheduleSlotId())
+                .orElseThrow(() -> new AppException(HttpStatus.NOT_FOUND, "Schedule slot not found"));
+
+        if (slot.isIsBooked()) {
+            throw new AppException(HttpStatus.CONFLICT, "This slot is already booked");
+        }
+
+        Appointment appointment = appointmentMapper.toEntity(requestDto, doctor, patient, slot);
         validateAppointmentTime(appointment);
         appointment.setStatus(AppointmentStatus.SCHEDULED);
-        return appointmentRepository.save(appointment);
+        
+        // Mark the slot as booked
+        slot.setIsBooked(true);
+        slot.setAvailable(false);
+        scheduleSlotRepository.save(slot);
+        
+        Appointment savedAppointment = appointmentRepository.save(appointment);
+        return appointmentMapper.toDto(savedAppointment);
     }
 
     @Override
     @Transactional(readOnly = true)
-    public Page<Appointment> findAllAppointments(Pageable pageable) {
-        return appointmentRepository.findAll(pageable);
+    public Page<AppointmentResponseDto> findAllAppointments(Pageable pageable) {
+        return appointmentRepository.findAll(pageable)
+                .map(appointmentMapper::toDto);
     }
 
     @Override
     @Transactional(readOnly = true)
-    public Appointment findAppointmentById(Long id) {
+    public AppointmentResponseDto findAppointmentById(Long id) {
         return appointmentRepository.findById(id)
+                .map(appointmentMapper::toDto)
                 .orElseThrow(() -> new AppException(HttpStatus.NOT_FOUND, "Appointment not found with id: " + id));
     }
 
     @Override
-    public Appointment updateAppointment(Long id, Appointment appointmentDetails) {
-        Appointment appointment = findAppointmentById(id);
+    public AppointmentResponseDto updateAppointment(Long id, AppointmentRequestDto appointmentDetails) {
+        Appointment appointment = appointmentRepository.findById(id)
+                .orElseThrow(() -> new AppException(HttpStatus.NOT_FOUND, "Appointment not found with id: " + id));
         
         if (appointment.getStatus() == AppointmentStatus.COMPLETED || 
             appointment.getStatus() == AppointmentStatus.CANCELLED) {
@@ -52,90 +85,108 @@ public class AppointmentServiceImpl implements AppointmentService {
                 "Cannot update appointment that is " + appointment.getStatus().name().toLowerCase());
         }
 
-        validateAppointmentTime(appointmentDetails);
+        User doctor = userService.getUserById(appointmentDetails.getDoctorId())
+                .orElseThrow(() -> new AppException(HttpStatus.NOT_FOUND, "Doctor not found"));
+        User patient = userService.getUserById(appointmentDetails.getPatientId())
+                .orElseThrow(() -> new AppException(HttpStatus.NOT_FOUND, "Patient not found"));
+        ScheduleSlot slot = scheduleSlotRepository.findById(appointmentDetails.getScheduleSlotId())
+                .orElseThrow(() -> new AppException(HttpStatus.NOT_FOUND, "Schedule slot not found"));
 
-        appointment.setStartTime(appointmentDetails.getStartTime());
-        appointment.setEndTime(appointmentDetails.getEndTime());
-        appointment.setReason(appointmentDetails.getReason());
-        appointment.setType(appointmentDetails.getType());
-        appointment.setAppointmentDate(appointmentDetails.getAppointmentDate());
+        Appointment updatedAppointment = appointmentMapper.toEntity(appointmentDetails, doctor, patient, slot);
+        validateAppointmentTime(updatedAppointment);
 
-        return appointmentRepository.save(appointment);
+        appointment.setSlot(updatedAppointment.getSlot());
+        appointment.setReason(updatedAppointment.getReason());
+        appointment.setType(updatedAppointment.getType());
+
+
+        return appointmentMapper.toDto(appointmentRepository.save(appointment));
     }
 
     @Override
     public void deleteAppointment(Long id) {
-        Appointment appointment = findAppointmentById(id);
-        
-        if (appointment.getStatus() == AppointmentStatus.COMPLETED) {
-            throw new AppException(HttpStatus.BAD_REQUEST, "Cannot delete completed appointment");
-        }
-        
-        appointmentRepository.deleteById(id);
+        Appointment appointment = appointmentRepository.findById(id)
+                .orElseThrow(() -> new AppException(HttpStatus.NOT_FOUND, "Appointment not found with id: " + id));
+        appointmentRepository.delete(appointment);
     }
 
     @Override
-    public Appointment updateAppointmentStatus(Long id, AppointmentStatus newStatus) {
-        Appointment appointment = findAppointmentById(id);
+    public AppointmentResponseDto updateAppointmentStatus(Long id, AppointmentStatus newStatus) {
+        Appointment appointment = appointmentRepository.findById(id)
+                .orElseThrow(() -> new AppException(HttpStatus.NOT_FOUND, "Appointment not found with id: " + id));
+        
         validateStatusTransition(appointment.getStatus(), newStatus);
         appointment.setStatus(newStatus);
-        return appointmentRepository.save(appointment);
+        
+        return appointmentMapper.toDto(appointmentRepository.save(appointment));
     }
 
     @Override
     @Transactional(readOnly = true)
-    public List<Appointment> findAppointmentsByDoctorId(Long doctorId) {
-        return appointmentRepository.findByDoctorId(doctorId);
+    public List<AppointmentResponseDto> findAppointmentsByDoctorId(Long doctorId) {
+        return appointmentRepository.findByDoctorId(doctorId).stream()
+                .map(appointmentMapper::toDto)
+                .collect(Collectors.toList());
     }
 
     @Override
     @Transactional(readOnly = true)
-    public List<Appointment> findAppointmentsByPatientId(Long patientId) {
-        return appointmentRepository.findByPatientId(patientId);
+    public List<AppointmentResponseDto> findAppointmentsByPatientId(Long patientId) {
+        return appointmentRepository.findByPatientId(patientId).stream()
+                .map(appointmentMapper::toDto)
+                .collect(Collectors.toList());
     }
 
     @Override
     @Transactional(readOnly = true)
-    public List<Appointment> findAppointmentsByStatus(AppointmentStatus status) {
-        return appointmentRepository.findByStatus(status);
+    public List<AppointmentResponseDto> findAppointmentsByStatus(AppointmentStatus status) {
+        return appointmentRepository.findByStatus(status).stream()
+                .map(appointmentMapper::toDto)
+                .collect(Collectors.toList());
     }
 
     @Override
     @Transactional(readOnly = true)
-    public List<Appointment> findAppointmentsByType(AppointmentType type) {
-        return appointmentRepository.findByType(type);
+    public List<AppointmentResponseDto> findAppointmentsByType(AppointmentType type) {
+        return appointmentRepository.findByType(type).stream()
+                .map(appointmentMapper::toDto)
+                .collect(Collectors.toList());
     }
 
     @Override
     @Transactional(readOnly = true)
-    public List<Appointment> findDoctorAppointmentsInDateRange(Long doctorId, LocalDateTime start, LocalDateTime end) {
-        return appointmentRepository.findByDoctorIdAndStartTimeBetween(doctorId, start, end);
+    public List<AppointmentResponseDto> findDoctorAppointmentsInDateRange(Long doctorId, LocalTime start, LocalTime end) {
+        return appointmentRepository.findByDoctorIdAndSlot_FromTimeBetween(doctorId, start, end).stream()
+                .map(appointmentMapper::toDto)
+                .collect(Collectors.toList());
     }
 
     @Override
     @Transactional(readOnly = true)
-    public List<Appointment> findPatientAppointmentsInDateRange(Long patientId, LocalDateTime start, LocalDateTime end) {
-        return appointmentRepository.findByPatientIdAndStartTimeBetween(patientId, start, end);
+    public List<AppointmentResponseDto> findPatientAppointmentsInDateRange(Long patientId, LocalTime start, LocalTime end) {
+        return appointmentRepository.findByPatientIdAndSlot_FromTimeBetween(patientId, start, end).stream()
+                .map(appointmentMapper::toDto)
+                .collect(Collectors.toList());
     }
 
     private void validateAppointmentTime(Appointment appointment) {
-        if (appointment.getStartTime() == null || appointment.getEndTime() == null) {
+        if (appointment.getSlot().getFromTime() == null || appointment.getSlot().getToTime() == null) {
             throw new AppException(HttpStatus.BAD_REQUEST, "Start time and end time are required");
         }
 
-        if (appointment.getStartTime().isAfter(appointment.getEndTime())) {
+        if (appointment.getSlot().getFromTime().isAfter(appointment.getSlot().getToTime())) {
             throw new AppException(HttpStatus.BAD_REQUEST, "Start time must be before end time");
         }
 
-        if (appointment.getStartTime().isBefore(LocalDateTime.now())) {
+        if (appointment.getSlot().getFromTime().isBefore(LocalTime.now())) {
             throw new AppException(HttpStatus.BAD_REQUEST, "Cannot create appointment in the past");
         }
 
         List<Appointment> overlappingAppointments = appointmentRepository
-                .findByDoctorIdAndStartTimeBetween(
+                .findByDoctorIdAndSlot_FromTimeBetween(
                     appointment.getDoctor().getId(),
-                    appointment.getStartTime(),
-                    appointment.getEndTime()
+                    appointment.getSlot().getFromTime(),
+                    appointment.getSlot().getToTime()
                 );
 
         if (!overlappingAppointments.isEmpty()) {
