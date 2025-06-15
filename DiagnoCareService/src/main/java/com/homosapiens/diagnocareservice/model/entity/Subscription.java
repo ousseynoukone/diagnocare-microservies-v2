@@ -3,6 +3,9 @@ package com.homosapiens.diagnocareservice.model.entity;
 import jakarta.persistence.*;
 import lombok.Data;
 import java.time.LocalDateTime;
+import org.hibernate.annotations.CreationTimestamp;
+import org.springframework.data.annotation.LastModifiedDate;
+import java.util.Date;
 
 @Data
 @Entity
@@ -28,4 +31,12 @@ public class Subscription {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "plan_id")
     private Plans plan;
+
+    @CreationTimestamp
+    @Column(updatable = false, name = "created_at")
+    private Date createdAt;
+
+    @LastModifiedDate
+    @Column(name = "updated_at")
+    private Date updatedAt;
 } 

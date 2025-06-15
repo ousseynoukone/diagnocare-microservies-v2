@@ -1,15 +1,17 @@
 package com.homosapiens.diagnocareservice.service;
 
-import com.homosapiens.diagnocareservice.model.entity.Clinic;
+import com.homosapiens.diagnocareservice.dto.request.ClinicRequestDTO;
+import com.homosapiens.diagnocareservice.dto.response.ClinicResponseDTO;
+
 import java.util.List;
 
 public interface ClinicService {
-    Clinic createClinic(Clinic clinic);
-    List<Clinic> findAllClinics();
-    Clinic findClinicById(Long id);
-    Clinic updateClinic(Long id, Clinic clinicDetails);
+    ClinicResponseDTO createClinic(ClinicRequestDTO clinic);
+    List<ClinicResponseDTO> findAllClinics();
+    ClinicResponseDTO findClinicById(Long id);
+    ClinicResponseDTO updateClinic(Long id, ClinicRequestDTO clinic);
     void deleteClinic(Long id);
-    List<Clinic> findClinicsByCity(String city);
-    List<Clinic> searchClinicsByName(String name);
-    List<Clinic> findClinicsByUserId(Long userId);
+    List<ClinicResponseDTO> findClinicsByCity(String city);
+    List<ClinicResponseDTO> searchClinicsByName(String name);
+    List<ClinicResponseDTO> findClinicsByUserId(Long userId);
 } 

@@ -17,7 +17,6 @@ import java.time.LocalTime;
 @Entity
 @Table(name = "weekdays")
 @EqualsAndHashCode(exclude = "availability")
-
 public class WeekDay {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -37,13 +36,9 @@ public class WeekDay {
     @Min(value = 10, message = "Slot duration must be at least 10 minutes")
     private Integer slotDuration;
 
-
-
-//    @NotNull(message = "Availability is required")
-//    @ManyToOne(fetch = FetchType.LAZY)
-//    @JoinColumn(name = "availability_id")
-//    private Availability availability;
-
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "availability_id")
+    private Availability availability;
 
     @PrePersist
     @PreUpdate

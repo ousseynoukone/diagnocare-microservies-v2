@@ -4,6 +4,7 @@ import com.homosapiens.diagnocareservice.model.entity.appointment.AppointmentSta
 import com.homosapiens.diagnocareservice.model.entity.appointment.AppointmentType;
 import com.homosapiens.diagnocareservice.model.entity.dtos.AppointmentRequestDto;
 import com.homosapiens.diagnocareservice.model.entity.dtos.AppointmentResponseDto;
+import com.homosapiens.diagnocareservice.model.mapper.AppointmentMapper;
 import com.homosapiens.diagnocareservice.service.AppointmentService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -91,5 +92,12 @@ public class AppointmentController {
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalTime start,
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalTime end) {
         return ResponseEntity.ok(appointmentService.findPatientAppointmentsInDateRange(patientId, start, end));
+    }
+
+    @PostMapping("cancel-appointment/{appointmentId}")
+    public ResponseEntity<AppointmentResponseDto> cancelAppointment(@PathVariable Long appointmentId) {
+
+        AppointmentResponseDto appointmentResponseDto = appointmentService.cancelAppointment(appointmentId) ;
+        return ResponseEntity.ok().body(appointmentResponseDto);
     }
 } 

@@ -23,10 +23,11 @@ public interface AppointmentService {
     List<AppointmentResponseDto> findAppointmentsByPatientId(Long patientId);
     List<AppointmentResponseDto> findAppointmentsByStatus(AppointmentStatus status);
     List<AppointmentResponseDto> findAppointmentsByType(AppointmentType type);
-    
+    AppointmentResponseDto cancelAppointment(Long id);
     @Transactional(readOnly = true)
     List<AppointmentResponseDto> findDoctorAppointmentsInDateRange(Long doctorId, LocalTime start, LocalTime end);
 
     @Transactional(readOnly = true)
     List<AppointmentResponseDto> findPatientAppointmentsInDateRange(Long patientId, LocalTime start, LocalTime end);
+
 }

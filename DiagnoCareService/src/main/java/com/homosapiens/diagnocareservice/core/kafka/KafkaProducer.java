@@ -2,6 +2,8 @@ package com.homosapiens.diagnocareservice.core.kafka;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
+import org.apache.kafka.clients.consumer.ConsumerRecord;
+import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Service;
 
@@ -23,5 +25,7 @@ public class KafkaProducer {
             logger.severe("Failed to serialize message: " + e.getMessage());
         }
     }
+
+
 }
 

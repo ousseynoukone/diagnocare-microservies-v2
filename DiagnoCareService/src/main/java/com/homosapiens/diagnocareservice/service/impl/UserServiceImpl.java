@@ -1,11 +1,10 @@
 package com.homosapiens.diagnocareservice.service.impl;
 
-import com.homosapiens.diagnocareservice.model.entity.Role;
 import com.homosapiens.diagnocareservice.model.entity.User;
+import com.homosapiens.diagnocareservice.model.entity.enums.RoleEnum;
 import com.homosapiens.diagnocareservice.repository.UserRepository;
 import com.homosapiens.diagnocareservice.service.UserService;
 import lombok.RequiredArgsConstructor;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -18,7 +17,6 @@ import java.util.Optional;
 public class UserServiceImpl implements UserService {
 
     private final UserRepository userRepository;
-
 
     @Override
     public User createUser(User user) {
@@ -58,8 +56,8 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
-    public List<User> getUsersByRole(Role role) {
-        return userRepository.getUserByRole(role);
+    public List<User> getUsersByRole(RoleEnum role) {
+        return userRepository.findByRoles_Name(role);
     }
 
     @Override

@@ -1,5 +1,7 @@
-package com.homosapiens.diagnocareservice.service.impl;
+package com.homosapiens.diagnocareservice.service.impl.appointment;
 
+import com.homosapiens.diagnocareservice.core.kafka.KafkaProducer;
+import com.homosapiens.diagnocareservice.core.kafka.eventEnums.KafkaEvent;
 import com.homosapiens.diagnocareservice.model.entity.availability.Availability;
 import com.homosapiens.diagnocareservice.model.entity.dtos.AvailabilityDto;
 import com.homosapiens.diagnocareservice.model.entity.dtos.AvailabilityResponseDto;
@@ -23,6 +25,7 @@ public class AvailabilityServiceImpl implements AvailabilityService {
     private final ScheduleSlotService scheduleSlotService;
     private final UserService userService;
     private final AvailabilityMapper availabilityMapper;
+    private final KafkaProducer kafkaProducer;
 
     @Override
     @Transactional
@@ -30,6 +33,8 @@ public class AvailabilityServiceImpl implements AvailabilityService {
         Availability availability = availabilityMapper.toAvailability(availabilityDto);
         Availability savedAvailability = availabilityRepository.save(availability);
         scheduleSlotService.createSlots(savedAvailability);
+
+        kafkaProducer.sendMessage(KafkaEvent.AVAILABILITY_CREATED.toString(), "Doctor Created Availability", savedAvailability);
         return AvailabilityResponseDto.fromEntity(savedAvailability);
     }
 

@@ -1,7 +1,7 @@
 package com.homosapiens.diagnocareservice.service;
 
-import com.homosapiens.diagnocareservice.model.entity.Role;
 import com.homosapiens.diagnocareservice.model.entity.User;
+import com.homosapiens.diagnocareservice.model.entity.enums.RoleEnum;
 import java.util.List;
 import java.util.Optional;
 
@@ -12,7 +12,7 @@ public interface UserService {
     Optional<User> getUserById(Long id);
     Optional<User> getUserByEmail(String email);
     List<User> getAllUsers();
-    List<User> getUsersByRole(Role role);
+    List<User> getUsersByRole(RoleEnum role);
     boolean existsByEmail(String email);
     Optional<User> getUserByPhoneNumber(String phoneNumber);
     Optional<User> getUserByStripeCustomerId(String stripeCustomerId);

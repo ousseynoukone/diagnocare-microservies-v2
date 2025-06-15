@@ -3,6 +3,8 @@ package com.homosapiens.diagnocareservice.model.entity;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.NotNull;
 import lombok.Data;
+import org.springframework.data.annotation.CreatedDate;
+import java.time.LocalDateTime;
 
 @Data
 @Entity
@@ -27,6 +29,8 @@ public class Clinic {
     @Column(length = 13)
     private String phoneNumber;
 
+    @CreatedDate
+    private LocalDateTime createdAt;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_id", nullable = true)

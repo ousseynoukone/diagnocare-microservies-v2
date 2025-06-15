@@ -7,7 +7,11 @@ import jakarta.validation.constraints.*;
 import lombok.Data;
 
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.List;
+
+import org.hibernate.annotations.CreationTimestamp;
+import org.springframework.data.annotation.LastModifiedDate;
 
 @Data
 @Entity
@@ -39,6 +43,14 @@ public class User {
     @Size(min = 8, message = "Password must be at least 8 characters long")
     @JsonProperty(access = JsonProperty.Access.WRITE_ONLY)
     private String password;
+
+    @CreationTimestamp
+    @Column(updatable = false, name = "created_at")
+    private Date createdAt;
+
+    @LastModifiedDate
+    @Column(updatable = false, name = "updated_at")
+    private Date updatedAt;
 
     @ManyToMany(fetch = FetchType.EAGER)
     @JoinTable(name = "user_roles",

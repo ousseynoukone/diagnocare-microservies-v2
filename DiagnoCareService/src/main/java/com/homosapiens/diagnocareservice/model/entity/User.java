@@ -2,7 +2,13 @@ package com.homosapiens.diagnocareservice.model.entity;
 
 import jakarta.persistence.*;
 import lombok.Data;
+import org.hibernate.annotations.CreationTimestamp;
+import org.springframework.data.annotation.LastModifiedDate;
+
 import java.time.LocalDate;
+import java.util.ArrayList;
+import java.util.Date;
+import java.util.List;
 
 @Data
 @Entity
@@ -33,9 +39,11 @@ public class User {
 
     private Boolean isActive;
 
-    @Enumerated(EnumType.STRING)
-    @Column(length = 20)
-    private Role role;
+    @ManyToMany(fetch = FetchType.EAGER)
+    @JoinTable(name = "user_roles",
+            joinColumns = @JoinColumn(name = "user_id", referencedColumnName = "id"),
+            inverseJoinColumns = @JoinColumn(name = "role_id", referencedColumnName = "id"))
+    private List<Role> roles = new ArrayList<>();
 
     // Doctor specific fields
     @Column(length = 255)
@@ -57,4 +65,12 @@ public class User {
     
     @Column(length = 50)
     private String credit;
+
+    @CreationTimestamp
+    @Column(updatable = false, name = "created_at")
+    private Date createdAt;
+
+    @LastModifiedDate
+    @Column(updatable = false, name = "updated_at")
+    private Date updatedAt;
 } 

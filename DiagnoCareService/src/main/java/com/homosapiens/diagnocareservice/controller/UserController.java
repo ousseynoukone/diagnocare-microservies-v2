@@ -1,7 +1,7 @@
 package com.homosapiens.diagnocareservice.controller;
 
-import com.homosapiens.diagnocareservice.model.entity.Role;
 import com.homosapiens.diagnocareservice.model.entity.User;
+import com.homosapiens.diagnocareservice.model.entity.enums.RoleEnum;
 import com.homosapiens.diagnocareservice.service.UserService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
@@ -64,7 +64,7 @@ public class UserController {
     }
 
     @GetMapping("/role/{role}")
-    public ResponseEntity<List<User>> getAllUsersByRole(@PathVariable Role role) {
+    public ResponseEntity<List<User>> getAllUsersByRole(@PathVariable RoleEnum role) {
         return ResponseEntity.ok(userService.getUsersByRole(role));
     }
 

@@ -1,4 +1,4 @@
-package com.homosapiens.diagnocareservice.service.impl;
+package com.homosapiens.diagnocareservice.service.impl.appointment;
 
 import com.homosapiens.diagnocareservice.core.exception.AppException;
 import com.homosapiens.diagnocareservice.model.entity.availability.WeekDay;

@@ -1,7 +1,7 @@
 package com.homosapiens.diagnocareservice.repository;
 
-import com.homosapiens.diagnocareservice.model.entity.Role;
 import com.homosapiens.diagnocareservice.model.entity.User;
+import com.homosapiens.diagnocareservice.model.entity.enums.RoleEnum;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
@@ -15,6 +15,5 @@ public interface UserRepository extends JpaRepository<User, Long> {
     Optional<User> findByPhoneNumber(String phoneNumber);
     Optional<User> findByStripeCustomerId(String stripeCustomerId);
     Optional<User> findByNpi(String npi);
-
-    List<User> getUserByRole(Role role);
+    List<User> findByRoles_Name(RoleEnum role);
 }

@@ -13,9 +13,9 @@ public class AvailabilityResponseDto {
     private Long id;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
-    private Integer slotDuration;
     private boolean isRepeating;
     private LocalDate repeatUntil;
+    private LocalDate availabilityDate;
     private Long userId;
     private Set<WeekDayResponseDto> weekDays = new HashSet<>();
 
@@ -33,9 +33,9 @@ public class AvailabilityResponseDto {
         dto.setId(availability.getId());
         dto.setCreatedAt(availability.getCreatedAt());
         dto.setUpdatedAt(availability.getUpdatedAt());
-        dto.setSlotDuration(availability.getSlotDuration());
         dto.setRepeating(availability.isRepeating());
         dto.setRepeatUntil(availability.getRepeatUntil());
+        dto.setAvailabilityDate(availability.getAvailabilityDate());
         dto.setUserId(availability.getUser().getId());
 
         if (availability.getWeekDays() != null) {

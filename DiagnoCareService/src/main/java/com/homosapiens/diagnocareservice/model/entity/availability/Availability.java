@@ -7,28 +7,23 @@ import jakarta.validation.constraints.Future;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotNull;
 import lombok.Data;
-import org.springframework.data.annotation.CreatedDate;
+import lombok.NoArgsConstructor;
+import org.hibernate.annotations.CreationTimestamp;
 import org.springframework.data.annotation.LastModifiedDate;
-import org.springframework.http.HttpStatus;
 
-import java.time.Instant;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.time.LocalTime;
 import java.util.HashSet;
 import java.util.Set;
 
 @Data
 @Entity
 @Table(name = "availabilities")
+@NoArgsConstructor
 public class Availability {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
-
-    @NotNull(message = "Slot duration is required")
-    @Min(value = 10, message = "Slot duration must be at least 10 minutes")
-    private Integer slotDuration;
 
     @NotNull(message = "Repeating status is required")
     private boolean isRepeating;
@@ -36,16 +31,18 @@ public class Availability {
     @Future(message = "Repeat until date must be in the future")
     private LocalDate repeatUntil;
 
-    @CreatedDate
-    @Column(updatable = false)
+    @NotNull(message = "Availability date is required")
+    private LocalDate availabilityDate;
+
+    @CreationTimestamp
+    @Column(updatable = false, name = "created_at")
     private LocalDateTime createdAt;
 
     @LastModifiedDate
-    private LocalDateTime  updatedAt;
+    @Column(name = "updated_at")
+    private LocalDateTime updatedAt;
 
-
-    @OneToMany
-
+    @OneToMany(mappedBy = "availability", cascade = CascadeType.ALL, orphanRemoval = true)
     private Set<WeekDay> weekDays = new HashSet<>();
 
     @NotNull(message = "User is required")
@@ -53,6 +50,11 @@ public class Availability {
     @JoinColumn(name = "user_id")
     private User user;
 
-
+    @PrePersist
+    public void prePersist() {
+        if (availabilityDate == null) {
+            availabilityDate = LocalDate.now();
+        }
+    }
 }
 

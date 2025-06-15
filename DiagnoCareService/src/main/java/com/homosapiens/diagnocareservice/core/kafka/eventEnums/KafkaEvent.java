@@ -1,9 +1,8 @@
 package com.homosapiens.diagnocareservice.core.kafka.eventEnums;
 
 public enum KafkaEvent {
-    USER_REGISTERED,
-    USER_UPDATE,
-    USER_DELETED;
+    AVAILABILITY_CREATED,
+    AVAILABILITIES_GENERATED;
 
     @Override
     public String toString() {
