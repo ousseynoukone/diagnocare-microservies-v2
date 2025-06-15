@@ -40,7 +40,7 @@ public class AvailabilityGenerator {
 
         while (currentAvailability.getAvailabilityDate().plusWeeks(1).isBefore(endDate)) {
             LocalDate nextDate = currentAvailability.getAvailabilityDate().plusWeeks(1);
-            
+
             // Check if availability already exists for this date and user
             boolean exists = availabilityRepository.existsByAvailabilityDateAndUserId(nextDate, availability.getUser().getId());
             if (!exists) {

@@ -40,13 +40,13 @@ public class AvailabilityServiceImpl implements AvailabilityService {
 
     @Override
     public Page<AvailabilityResponseDto> getAllAvailability(Pageable pageable) {
-        return availabilityRepository.findAll(pageable)
+        return availabilityRepository.findAllWithWeekDays(pageable)
             .map(AvailabilityResponseDto::fromEntity);
     }
 
     @Override
     public Optional<AvailabilityResponseDto> getAvailabilityById(long id) {
-        return availabilityRepository.findById(id)
+        return availabilityRepository.findByIdWithWeekDays(id)
             .map(AvailabilityResponseDto::fromEntity);
     }
 
