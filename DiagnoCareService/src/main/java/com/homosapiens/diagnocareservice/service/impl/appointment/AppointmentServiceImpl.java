@@ -22,6 +22,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalTime;
 import java.util.List;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 @Service
@@ -151,6 +152,19 @@ public class AppointmentServiceImpl implements AppointmentService {
         return appointmentRepository.findByType(type).stream()
                 .map(appointmentMapper::toDto)
                 .collect(Collectors.toList());
+    }
+
+    @Override
+    public AppointmentResponseDto cancelAppointment(Long id) {
+        Optional<Appointment> appointmentOptional = appointmentRepository.findById(id);
+        if (appointmentOptional.isPresent()) {
+            Appointment appointment = appointmentOptional.get();
+            appointment.setStatus(AppointmentStatus.CANCELLED);
+         return appointmentMapper.toDto( appointmentRepository.save(appointment))  ;
+        }else {
+            throw new AppException(HttpStatus.NOT_FOUND, "Appointment not found with id: " + id);
+        }
+
     }
 
     @Override

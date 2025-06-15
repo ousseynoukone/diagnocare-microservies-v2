@@ -55,4 +55,9 @@ public class AvailabilityServiceImpl implements AvailabilityService {
     public void deleteAvailability(long id) {
         availabilityRepository.deleteById(id);
     }
+
+    @Override
+    public boolean generateAvailabilities(Long id) {
+        return false;
+    }
 } 
