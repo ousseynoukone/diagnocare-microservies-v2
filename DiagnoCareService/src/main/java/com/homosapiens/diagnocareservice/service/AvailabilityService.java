@@ -9,7 +9,8 @@ import org.springframework.data.domain.Pageable;
 import java.util.Optional;
 
 public interface AvailabilityService {
-    AvailabilityResponseDto createAvailability(AvailabilityDto availabilityDto);
+    AvailabilityResponseDto createAvailability(AvailabilityDto availabilityDto,Optional<Boolean> ignoreAvailabilityCheck);
+
     Page<AvailabilityResponseDto> getAllAvailability(Pageable pageable);
     Optional<AvailabilityResponseDto> getAvailabilityById(long id);
     AvailabilityResponseDto updateAvailability(Availability availability);

@@ -1,5 +1,6 @@
 package com.homosapiens.diagnocareservice.model.entity.availability;
 
+import com.fasterxml.jackson.annotation.JsonManagedReference;
 import com.homosapiens.diagnocareservice.core.exception.AppException;
 import com.homosapiens.diagnocareservice.model.entity.User;
 import jakarta.persistence.*;
@@ -43,6 +44,7 @@ public class Availability {
     private LocalDateTime updatedAt;
 
     @OneToMany(mappedBy = "availability", cascade = CascadeType.ALL, orphanRemoval = true)
+    @JsonManagedReference
     private Set<WeekDay> weekDays = new HashSet<>();
 
     @NotNull(message = "User is required")

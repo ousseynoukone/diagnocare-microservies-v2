@@ -10,6 +10,7 @@ import org.springframework.stereotype.Component;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 
 @Component
 @RequiredArgsConstructor
@@ -46,7 +47,7 @@ public class AvailabilityGenerator {
             if (!exists) {
                 Availability newAvailability = getAvailability(currentAvailability);
                 AvailabilityResponseDto createdAvailability = availabilityService
-                        .createAvailability(availabilityMapper.toDto(newAvailability));
+                        .createAvailability(availabilityMapper.toDto(newAvailability), Optional.of(true));
                 availabilities.add(createdAvailability);
                 currentAvailability = newAvailability;
             } else {

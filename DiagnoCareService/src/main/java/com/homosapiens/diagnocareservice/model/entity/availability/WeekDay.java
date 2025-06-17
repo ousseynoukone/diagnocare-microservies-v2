@@ -1,5 +1,6 @@
 package com.homosapiens.diagnocareservice.model.entity.availability;
 
+import com.fasterxml.jackson.annotation.JsonBackReference;
 import com.homosapiens.diagnocareservice.core.exception.AppException;
 import com.homosapiens.diagnocareservice.model.entity.User;
 import jakarta.persistence.*;
@@ -38,6 +39,7 @@ public class WeekDay {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "availability_id")
+    @JsonBackReference
     private Availability availability;
 
     @PrePersist

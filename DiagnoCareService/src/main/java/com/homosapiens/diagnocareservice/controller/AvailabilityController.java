@@ -12,6 +12,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Optional;
 
 @RestController
 @AllArgsConstructor
@@ -26,6 +27,11 @@ public class AvailabilityController {
 
     @PostMapping
     public ResponseEntity<AvailabilityResponseDto> createAvailability(@RequestBody AvailabilityDto availability) {
-        return ResponseEntity.ok(availabilityService.createAvailability(availability)) ;
+        return ResponseEntity.ok(availabilityService.createAvailability(availability, Optional.empty())) ;
+    }
+
+    @PutMapping
+    public ResponseEntity<AvailabilityResponseDto> updateAvailability(@RequestBody AvailabilityDto availability) {
+        return ResponseEntity.ok(availabilityService.createAvailability(availability, Optional.empty())) ;
     }
 }

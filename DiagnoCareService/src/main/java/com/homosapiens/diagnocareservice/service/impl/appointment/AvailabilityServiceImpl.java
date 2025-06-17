@@ -1,5 +1,6 @@
 package com.homosapiens.diagnocareservice.service.impl.appointment;
 
+import com.homosapiens.diagnocareservice.core.exception.AppException;
 import com.homosapiens.diagnocareservice.core.kafka.KafkaProducer;
 import com.homosapiens.diagnocareservice.core.kafka.eventEnums.KafkaEvent;
 import com.homosapiens.diagnocareservice.model.entity.availability.Availability;
@@ -14,8 +15,10 @@ import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 
+import java.time.LocalDate;
 import java.util.Optional;
 
 @Service
@@ -29,7 +32,24 @@ public class AvailabilityServiceImpl implements AvailabilityService {
 
     @Override
     @Transactional
-    public AvailabilityResponseDto createAvailability(AvailabilityDto availabilityDto) {
+    public AvailabilityResponseDto createAvailability(AvailabilityDto availabilityDto, Optional<Boolean> ignoreAvailabilityCheck ) {
+        boolean ignoreCheck = ignoreAvailabilityCheck.orElse(false);
+
+        if(!ignoreCheck){
+            // Can doctor create new availabilities
+            Optional<Availability> lastAvailability = availabilityRepository.findFirstByUserId_OrderByAvailabilityDateDesc(availabilityDto.getUserId());
+
+            if (lastAvailability.isPresent()) {
+                Availability availability = lastAvailability.get();
+                if(!availability.getRepeatUntil().minusWeeks(1).isBefore(LocalDate.now())){
+
+                    throw new AppException(HttpStatus.NOT_ACCEPTABLE, "You already have a running availability , you must either edit your current one or wait  at least until "+availabilityDto.getRepeatUntil().minusWeeks(1));
+
+                }
+            }
+        }
+
+
         Availability availability = availabilityMapper.toAvailability(availabilityDto);
         Availability savedAvailability = availabilityRepository.save(availability);
         scheduleSlotService.createSlots(savedAvailability);

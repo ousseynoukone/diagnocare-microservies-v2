@@ -18,6 +18,8 @@ public interface AvailabilityRepository extends JpaRepository<Availability, Long
     Optional<Availability> findByIdAndUserId(Long id, Long userId);
     boolean existsByAvailabilityDateAndUserId(LocalDate availabilityDate, Long userId);
 
+    Optional<Availability> findFirstByUserId_OrderByAvailabilityDateDesc(Long userId);
+
     Optional<Availability> findFirstByUserIdAndAvailabilityDateGreaterThanEqualOrderByAvailabilityDateAsc(Long userId, LocalDate today);
 
     Optional<Availability> findFirstByUserIdAndAvailabilityDateGreaterThanOrderByAvailabilityDateAsc(Long userId, LocalDate date);
