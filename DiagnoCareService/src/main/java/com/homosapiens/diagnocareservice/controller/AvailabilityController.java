@@ -25,13 +25,26 @@ public class AvailabilityController {
         return ResponseEntity.ok(availabilityService.getAllAvailability(pageable));
     }
 
+    @GetMapping("/{id}")
+    public ResponseEntity<AvailabilityResponseDto> getAvailabilityById(@PathVariable long id) {
+        Optional<AvailabilityResponseDto> availability = availabilityService.getAvailabilityById(id);
+        return availability.map(ResponseEntity::ok)
+                .orElse(ResponseEntity.notFound().build());
+    }
+
     @PostMapping
     public ResponseEntity<AvailabilityResponseDto> createAvailability(@RequestBody AvailabilityDto availability) {
         return ResponseEntity.ok(availabilityService.createAvailability(availability, Optional.empty())) ;
     }
 
-    @PutMapping
-    public ResponseEntity<AvailabilityResponseDto> updateAvailability(@RequestBody AvailabilityDto availability) {
-        return ResponseEntity.ok(availabilityService.createAvailability(availability, Optional.empty())) ;
+    @PutMapping("/{id}")
+    public ResponseEntity<AvailabilityResponseDto> updateAvailability(@RequestBody AvailabilityDto availability, @PathVariable long id) {
+        return ResponseEntity.ok(availabilityService.updateAvailability(availability,id));
+    }
+
+    @DeleteMapping("/{id}")
+    public ResponseEntity<Void> deleteAvailability(@PathVariable long id) {
+        availabilityService.deleteAvailability(id);
+        return ResponseEntity.noContent().build();
     }
 }

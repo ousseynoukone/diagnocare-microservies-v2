@@ -45,8 +45,13 @@ public class WeekDay {
     @PrePersist
     @PreUpdate
     private void validateTimeRange() {
-        if (fromTime != null && toTime != null && fromTime.isAfter(toTime)) {
-            throw new AppException(HttpStatus.BAD_REQUEST,"Start time must be before end time");
+        if (fromTime != null && toTime != null) {
+            if (fromTime.equals(toTime)) {
+                throw new AppException(HttpStatus.BAD_REQUEST, "Start time and end time cannot be the same");
+            }
+            if (fromTime.isAfter(toTime)) {
+                throw new AppException(HttpStatus.BAD_REQUEST, "Start time must be before end time");
+            }
         }
     }
 }

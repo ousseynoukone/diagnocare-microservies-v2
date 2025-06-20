@@ -61,4 +61,11 @@ public class WeekDayServiceImpl implements WeekDayService {
         }
         weekDayRepository.deleteById(id);
     }
+
+    @Override
+    public void deleteAllWeekDays(Set<WeekDay> weekDays) {
+        if (weekDays != null && !weekDays.isEmpty()) {
+            weekDayRepository.deleteAll(weekDays);
+        }
+    }
 } 

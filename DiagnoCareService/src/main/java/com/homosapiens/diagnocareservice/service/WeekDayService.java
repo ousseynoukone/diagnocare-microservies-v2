@@ -11,4 +11,5 @@ public interface WeekDayService {
     List<WeekDay> getAllWeekDays();
     WeekDay updateWeekDay(Long id, WeekDay weekDay);
     void deleteWeekDay(Long id);
+    void deleteAllWeekDays(Set<WeekDay> weekDays);
 } 

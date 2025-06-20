@@ -23,10 +23,12 @@ public interface AvailabilityRepository extends JpaRepository<Availability, Long
     Optional<Availability> findFirstByUserIdAndAvailabilityDateGreaterThanEqualOrderByAvailabilityDateAsc(Long userId, LocalDate today);
 
     Optional<Availability> findFirstByUserIdAndAvailabilityDateGreaterThanOrderByAvailabilityDateAsc(Long userId, LocalDate date);
+    void deleteByisGeneratedAndUserId(boolean isGenerated, Long id);
 
     @Query("SELECT a FROM Availability a LEFT JOIN FETCH a.weekDays WHERE a.id = :id")
     Optional<Availability> findByIdWithWeekDays(@Param("id") Long id);
 
     @Query("SELECT a FROM Availability a LEFT JOIN FETCH a.weekDays")
     Page<Availability> findAllWithWeekDays(Pageable pageable);
+
 }

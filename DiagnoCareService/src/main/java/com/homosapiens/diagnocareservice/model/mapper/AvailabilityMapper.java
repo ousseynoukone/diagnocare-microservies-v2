@@ -39,6 +39,7 @@ public class AvailabilityMapper {
         availability.setRepeating(availabilityDto.isRepeating());
         availability.setRepeatUntil(availabilityDto.getRepeatUntil());
         availability.setUser(user);
+        availability.setGenerated(availabilityDto.isGenerated());
         availability.setAvailabilityDate(availabilityDto.getAvailabilityDate() != null ? 
             availabilityDto.getAvailabilityDate() : LocalDate.now());
 
@@ -64,7 +65,7 @@ public class AvailabilityMapper {
         availabilityDto.setRepeatUntil(availability.getRepeatUntil());
         availabilityDto.setUserId(availability.getUser() != null ? availability.getUser().getId() : null);
         availabilityDto.setAvailabilityDate(availability.getAvailabilityDate());
-
+        availabilityDto.setGenerated(availability.isGenerated());
         Set<WeekDayDto> weekDayDtos = availability.getWeekDays().stream()
                 .map(weekDay -> weekDayDtoMapper.toDto(weekDay))
                 .collect(Collectors.toSet());

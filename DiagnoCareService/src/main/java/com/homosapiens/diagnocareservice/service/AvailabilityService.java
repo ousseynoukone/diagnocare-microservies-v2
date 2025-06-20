@@ -13,7 +13,7 @@ public interface AvailabilityService {
 
     Page<AvailabilityResponseDto> getAllAvailability(Pageable pageable);
     Optional<AvailabilityResponseDto> getAvailabilityById(long id);
-    AvailabilityResponseDto updateAvailability(Availability availability);
+    AvailabilityResponseDto updateAvailability(AvailabilityDto availability, long id);
     void deleteAvailability(long id);
     boolean generateAvailabilities(Long id);
 

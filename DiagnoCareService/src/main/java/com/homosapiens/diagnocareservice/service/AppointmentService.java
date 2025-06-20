@@ -14,6 +14,7 @@ import java.util.List;
 
 public interface AppointmentService {
     AppointmentResponseDto createAppointment(AppointmentRequestDto appointment);
+    AppointmentResponseDto updateAppointment(AppointmentRequestDto appointment, Long id);
     Page<AppointmentResponseDto> findAllAppointments(Pageable pageable);
     AppointmentResponseDto findAppointmentById(Long id);
     AppointmentResponseDto updateAppointment(Long id, AppointmentRequestDto appointmentDetails);

@@ -26,18 +26,10 @@ public class ScheduleSlot {
     @NotNull(message = "Booking status is required")
     private boolean IsBooked;
 
-    @NotNull(message = "Availability status is required")
-    private boolean isAvailable;
-
-
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name = "week_day_id", nullable = false)
+    @JoinColumn(name = "week_day_id", nullable = false )
     private WeekDay weekDay;
 
     @OneToOne(fetch = FetchType.LAZY)
     private Appointment appointment;
-
-
-
-
 }

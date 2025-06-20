@@ -53,11 +53,16 @@ public class AppointmentServiceImpl implements AppointmentService {
         
         // Mark the slot as booked
         slot.setIsBooked(true);
-        slot.setAvailable(false);
         scheduleSlotRepository.save(slot);
         
         Appointment savedAppointment = appointmentRepository.save(appointment);
         return appointmentMapper.toDto(savedAppointment);
+    }
+
+    @Override
+    public AppointmentResponseDto updateAppointment(AppointmentRequestDto appointment, Long id) {
+
+        return null;
     }
 
     @Override

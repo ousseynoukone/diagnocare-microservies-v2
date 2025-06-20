@@ -18,6 +18,7 @@ public class AvailabilityResponseDto {
     private LocalDate availabilityDate;
     private Long userId;
     private Set<WeekDayResponseDto> weekDays = new HashSet<>();
+    private boolean isGenerated;
 
     @Data
     public static class WeekDayResponseDto {
@@ -37,6 +38,7 @@ public class AvailabilityResponseDto {
         dto.setRepeatUntil(availability.getRepeatUntil());
         dto.setAvailabilityDate(availability.getAvailabilityDate());
         dto.setUserId(availability.getUser().getId());
+        dto.setGenerated(availability.isGenerated());
 
         if (availability.getWeekDays() != null) {
             availability.getWeekDays().forEach(weekDay -> {

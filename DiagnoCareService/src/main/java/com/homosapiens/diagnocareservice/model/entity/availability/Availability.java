@@ -43,7 +43,7 @@ public class Availability {
     @Column(name = "updated_at")
     private LocalDateTime updatedAt;
 
-    @OneToMany(mappedBy = "availability", cascade = CascadeType.ALL, orphanRemoval = true)
+    @OneToMany(mappedBy = "availability", fetch = FetchType.LAZY)
     @JsonManagedReference
     private Set<WeekDay> weekDays = new HashSet<>();
 
@@ -51,6 +51,8 @@ public class Availability {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_id")
     private User user;
+
+    private boolean isGenerated;
 
     @PrePersist
     public void prePersist() {

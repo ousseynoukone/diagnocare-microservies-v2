@@ -12,7 +12,6 @@ public class ScheduleSlotResponseDto {
     private LocalTime toTime;
     private Boolean isActive;
     private boolean IsBooked;
-    private boolean isAvailable;
     private Long availabilityId;
     private WeekDayResponseDto weekDay;
 
@@ -23,7 +22,6 @@ public class ScheduleSlotResponseDto {
         dto.setToTime(slot.getToTime());
         dto.setIsActive(slot.getIsActive());
         dto.setIsBooked(slot.isIsBooked());
-        dto.setAvailable(slot.isAvailable());
         dto.setWeekDay(WeekDayResponseDto.fromEntity(slot.getWeekDay()));
         dto.setAvailabilityId(slot.getAvailability().getId());
         return dto;

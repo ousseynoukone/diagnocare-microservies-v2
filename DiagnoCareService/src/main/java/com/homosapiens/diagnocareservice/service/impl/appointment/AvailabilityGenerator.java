@@ -46,6 +46,7 @@ public class AvailabilityGenerator {
             boolean exists = availabilityRepository.existsByAvailabilityDateAndUserId(nextDate, availability.getUser().getId());
             if (!exists) {
                 Availability newAvailability = getAvailability(currentAvailability);
+                newAvailability.setGenerated(true);
                 AvailabilityResponseDto createdAvailability = availabilityService
                         .createAvailability(availabilityMapper.toDto(newAvailability), Optional.of(true));
                 availabilities.add(createdAvailability);

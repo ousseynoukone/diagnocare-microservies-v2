@@ -11,7 +11,6 @@ import java.time.LocalTime;
 @Data
 public class WeekDayDto {
 
-
     @NotNull(message = "Start time is required")
     private LocalTime fromTime;
 
@@ -26,10 +25,8 @@ public class WeekDayDto {
     @Min(value = 10, message = "Slot duration must be at least 10 minutes")
     private Integer slotDuration;
 
-    @NotNull(message = "Availability is required")
+    // Optional field - not required when updating availability
     private Long availabilityId;
-
-
 }
 
 

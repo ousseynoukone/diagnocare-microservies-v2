@@ -19,5 +19,7 @@ public class AvailabilityDto {
     private Set<WeekDayDto> weekDays = new HashSet<>();
 
     private Long userId;
+
+    private boolean isGenerated;
 }
 
