@@ -47,6 +47,11 @@ public class AppointmentServiceImpl implements AppointmentService {
             throw new AppException(HttpStatus.CONFLICT, "This slot is already booked");
         }
 
+        // Check if the slot is active
+        if (slot.getIsActive() == null || !slot.getIsActive()) {
+            throw new AppException(HttpStatus.BAD_REQUEST, "Cannot book an inactive slot");
+        }
+
         Appointment appointment = appointmentMapper.toEntity(requestDto, doctor, patient, slot);
         validateAppointmentTime(appointment);
         appointment.setStatus(AppointmentStatus.SCHEDULED);
@@ -97,6 +102,11 @@ public class AppointmentServiceImpl implements AppointmentService {
                 .orElseThrow(() -> new AppException(HttpStatus.NOT_FOUND, "Patient not found"));
         ScheduleSlot slot = scheduleSlotRepository.findById(appointmentDetails.getScheduleSlotId())
                 .orElseThrow(() -> new AppException(HttpStatus.NOT_FOUND, "Schedule slot not found"));
+
+        // Check if the slot is active
+        if (slot.getIsActive() == null || !slot.getIsActive()) {
+            throw new AppException(HttpStatus.BAD_REQUEST, "Cannot book an inactive slot");
+        }
 
         Appointment updatedAppointment = appointmentMapper.toEntity(appointmentDetails, doctor, patient, slot);
         validateAppointmentTime(updatedAppointment);
@@ -186,6 +196,32 @@ public class AppointmentServiceImpl implements AppointmentService {
         return appointmentRepository.findByPatientIdAndSlot_FromTimeBetween(patientId, start, end).stream()
                 .map(appointmentMapper::toDto)
                 .collect(Collectors.toList());
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<AppointmentResponseDto> findAppointmentsWithInactiveSlots() {
+        return appointmentRepository.findAppointmentsWithInactiveSlots().stream()
+                .map(appointmentMapper::toDto)
+                .collect(Collectors.toList());
+    }
+
+    @Override
+    @Transactional
+    public void fixAppointmentsWithInactiveSlots() {
+        List<Appointment> appointmentsWithInactiveSlots = appointmentRepository.findAppointmentsWithInactiveSlots();
+        
+        for (Appointment appointment : appointmentsWithInactiveSlots) {
+            // Cancel the appointment
+            appointment.setStatus(AppointmentStatus.CANCELLED);
+            
+            // Unbook the slot
+            ScheduleSlot slot = appointment.getSlot();
+            slot.setIsBooked(false);
+            scheduleSlotRepository.save(slot);
+            
+            appointmentRepository.save(appointment);
+        }
     }
 
     private void validateAppointmentTime(Appointment appointment) {

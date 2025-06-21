@@ -12,9 +12,6 @@ import com.fasterxml.jackson.annotation.JsonFormat;
 @Data
 public class AvailabilityDto {
 
-    @Schema(example = "true")
-    private boolean isRepeating;
-
     @Schema(example = "2025-09-21")
     @JsonFormat(pattern = "yyyy-MM-dd")
     private LocalDate repeatUntil;

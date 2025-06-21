@@ -102,4 +102,15 @@ public class AppointmentController {
         AppointmentResponseDto appointmentResponseDto = appointmentService.cancelAppointment(appointmentId) ;
         return ResponseEntity.ok().body(appointmentResponseDto);
     }
+
+    @GetMapping("/inactive-slots")
+    public ResponseEntity<List<AppointmentResponseDto>> getAppointmentsWithInactiveSlots() {
+        return ResponseEntity.ok(appointmentService.findAppointmentsWithInactiveSlots());
+    }
+
+    @PostMapping("/fix-inactive-slots")
+    public ResponseEntity<Void> fixAppointmentsWithInactiveSlots() {
+        appointmentService.fixAppointmentsWithInactiveSlots();
+        return ResponseEntity.ok().build();
+    }
 } 

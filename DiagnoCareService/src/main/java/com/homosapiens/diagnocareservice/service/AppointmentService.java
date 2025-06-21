@@ -31,4 +31,9 @@ public interface AppointmentService {
     @Transactional(readOnly = true)
     List<AppointmentResponseDto> findPatientAppointmentsInDateRange(Long patientId, LocalTime start, LocalTime end);
 
+    // Utility method to handle appointments with inactive slots
+    List<AppointmentResponseDto> findAppointmentsWithInactiveSlots();
+    
+    // Method to fix appointments with inactive slots by canceling them
+    void fixAppointmentsWithInactiveSlots();
 }
