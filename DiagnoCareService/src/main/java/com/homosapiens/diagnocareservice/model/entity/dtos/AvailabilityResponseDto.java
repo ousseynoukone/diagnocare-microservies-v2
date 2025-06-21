@@ -34,11 +34,10 @@ public class AvailabilityResponseDto {
         dto.setId(availability.getId());
         dto.setCreatedAt(availability.getCreatedAt());
         dto.setUpdatedAt(availability.getUpdatedAt());
-        dto.setRepeating(availability.isRepeating());
+
         dto.setRepeatUntil(availability.getRepeatUntil());
         dto.setAvailabilityDate(availability.getAvailabilityDate());
         dto.setUserId(availability.getUser().getId());
-        dto.setGenerated(availability.isGenerated());
 
         if (availability.getWeekDays() != null) {
             availability.getWeekDays().forEach(weekDay -> {

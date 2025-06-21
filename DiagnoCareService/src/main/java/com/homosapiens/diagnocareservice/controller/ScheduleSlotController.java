@@ -27,7 +27,7 @@ public class ScheduleSlotController {
     @GetMapping("/availability/{availabilityId}")
     public ResponseEntity<List<ScheduleSlotResponseDto>> getSlotsByAvailabilityId(
             @PathVariable Long availabilityId) {
-        List<ScheduleSlot> slots = scheduleSlotRepository.findByAvailabilityId(availabilityId);
+        List<ScheduleSlot> slots = scheduleSlotRepository.findByWeekDayAvailabilityId(availabilityId);
         List<ScheduleSlotResponseDto> response = slots.stream()
                 .map(ScheduleSlotResponseDto::fromEntity)
                 .collect(Collectors.toList());
@@ -38,7 +38,7 @@ public class ScheduleSlotController {
     public ResponseEntity<Page<ScheduleSlotResponseDto>> getSlotsByAvailabilityIdPaginated(
             @PathVariable Long availabilityId,
             Pageable pageable) {
-        Page<ScheduleSlot> slots = scheduleSlotRepository.findByAvailabilityId(availabilityId, pageable);
+        Page<ScheduleSlot> slots = scheduleSlotRepository.findByWeekDayAvailabilityId(availabilityId, pageable);
         Page<ScheduleSlotResponseDto> response = slots.map(ScheduleSlotResponseDto::fromEntity);
         return ResponseEntity.ok(response);
     }

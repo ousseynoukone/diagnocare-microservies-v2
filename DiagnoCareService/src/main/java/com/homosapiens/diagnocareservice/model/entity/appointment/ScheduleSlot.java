@@ -5,7 +5,13 @@ import com.homosapiens.diagnocareservice.model.entity.availability.WeekDay;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.NotNull;
 import lombok.Data;
+import org.hibernate.annotations.CreationTimestamp;
+import org.springframework.data.annotation.CreatedDate;
+import org.springframework.data.annotation.LastModifiedDate;
+
+import java.time.LocalDateTime;
 import java.time.LocalTime;
+import java.time.LocalDate;
 
 @Data
 @Entity
@@ -19,17 +25,27 @@ public class ScheduleSlot {
     private LocalTime toTime;
     private Boolean isActive;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "availability_id")
-    private Availability availability;
-
     @NotNull(message = "Booking status is required")
     private boolean IsBooked;
 
-    @ManyToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name = "week_day_id", nullable = false )
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "week_day_id")
     private WeekDay weekDay;
 
-    @OneToOne(fetch = FetchType.LAZY)
+    @OneToOne(fetch = FetchType.LAZY )
     private Appointment appointment;
+
+    @CreationTimestamp
+    private LocalDateTime createdAt;
+
+    @LastModifiedDate
+    private LocalDateTime updatedAt;
+
+    @Column(nullable = false)
+    private LocalDate slotDate;
+
+    // Helper method to get availability through weekDay
+    public Availability getAvailability() {
+        return weekDay != null ? weekDay.getAvailability() : null;
+    }
 }

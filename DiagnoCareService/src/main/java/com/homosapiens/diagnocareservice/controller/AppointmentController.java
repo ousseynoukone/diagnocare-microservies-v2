@@ -27,6 +27,7 @@ public class AppointmentController {
 
     @PostMapping
     public ResponseEntity<AppointmentResponseDto> createAppointment(@Valid @RequestBody AppointmentRequestDto appointment) {
+
         return new ResponseEntity<>(appointmentService.createAppointment(appointment), HttpStatus.CREATED);
     }
 
@@ -42,6 +43,7 @@ public class AppointmentController {
 
     @PutMapping("/{id}")
     public ResponseEntity<AppointmentResponseDto> updateAppointment(@PathVariable Long id, @Valid @RequestBody AppointmentRequestDto appointment) {
+
         return ResponseEntity.ok(appointmentService.updateAppointment(id, appointment));
     }
 

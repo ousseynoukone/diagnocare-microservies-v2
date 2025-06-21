@@ -26,9 +26,6 @@ public class Availability {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @NotNull(message = "Repeating status is required")
-    private boolean isRepeating;
-
     @Future(message = "Repeat until date must be in the future")
     private LocalDate repeatUntil;
 
@@ -52,7 +49,6 @@ public class Availability {
     @JoinColumn(name = "user_id")
     private User user;
 
-    private boolean isGenerated;
 
     @PrePersist
     public void prePersist() {

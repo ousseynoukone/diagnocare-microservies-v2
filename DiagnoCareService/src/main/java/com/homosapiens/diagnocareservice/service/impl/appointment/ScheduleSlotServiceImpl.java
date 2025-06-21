@@ -14,6 +14,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDate;
 import java.time.LocalTime;
 import java.util.ArrayList;
 import java.util.List;
@@ -29,6 +30,7 @@ public class ScheduleSlotServiceImpl implements ScheduleSlotService {
         try {
             List<ScheduleSlot> slots = generateSlots(availability);
 
+            System.out.println("Availability WeekDay: " + availability.getWeekDays().size());
             System.out.println("Generated slots: " + slots.size());
             scheduleSlotRepository.saveAll(slots);
         } catch (Exception e) {
@@ -38,7 +40,7 @@ public class ScheduleSlotServiceImpl implements ScheduleSlotService {
 
     @Override
     public void bulkDelete(Availability savedAvailability) {
-        scheduleSlotRepository.deleteAllByAvailability(savedAvailability);
+        scheduleSlotRepository.deleteByWeekDay_Availability_Id(savedAvailability.getId());
     }
 
     @Override
@@ -110,31 +112,35 @@ public class ScheduleSlotServiceImpl implements ScheduleSlotService {
     private List<ScheduleSlot> generateSlots(Availability availability) {
         List<ScheduleSlot> scheduleSlots = new ArrayList<>();
         Set<WeekDay> weekDays = availability.getWeekDays();
-
-
-        for (WeekDay weekDay : weekDays) {
-            LocalTime startTime = weekDay.getFromTime();
-            LocalTime endTime = weekDay.getToTime();
-            int duration = weekDay.getSlotDuration();
-
-            LocalTime slotStart = startTime;
-            while (!slotStart.plusMinutes(duration).isAfter(endTime)) {
-                LocalTime slotEnd = slotStart.plusMinutes(duration);
-
-                ScheduleSlot slot = new ScheduleSlot();
-                slot.setAvailability(availability);
-                slot.setFromTime(slotStart);
-                slot.setToTime(slotEnd);
-                slot.setIsActive(true);
-                slot.setIsBooked(false);
-                slot.setWeekDay(weekDay);
-
-                scheduleSlots.add(slot);
-                slotStart = slotEnd;
+        if (availability.getAvailabilityDate() == null || availability.getRepeatUntil() == null) {
+            return scheduleSlots;
+        }
+        LocalDate startDate = availability.getAvailabilityDate();
+        LocalDate endDate = availability.getRepeatUntil();
+        LocalDate today = LocalDate.now();
+        for (LocalDate date = startDate; !date.isAfter(endDate); date = date.plusDays(1)) {
+            if (date.isBefore(today)) continue; // skip past dates
+            for (WeekDay weekDay : weekDays) {
+                if (date.getDayOfWeek().name().equals(weekDay.getDaysOfWeek().name())) {
+                    LocalTime startTime = weekDay.getFromTime();
+                    LocalTime endTime = weekDay.getToTime();
+                    int duration = weekDay.getSlotDuration();
+                    LocalTime slotStart = startTime;
+                    while (!slotStart.plusMinutes(duration).isAfter(endTime)) {
+                        LocalTime slotEnd = slotStart.plusMinutes(duration);
+                        ScheduleSlot slot = new ScheduleSlot();
+                        slot.setFromTime(slotStart);
+                        slot.setToTime(slotEnd);
+                        slot.setSlotDate(date);
+                        slot.setIsActive(true);
+                        slot.setIsBooked(false);
+                        slot.setWeekDay(weekDay);
+                        scheduleSlots.add(slot);
+                        slotStart = slotEnd;
+                    }
+                }
             }
         }
-        System.out.println("sscheduleSlots: " + scheduleSlots.size());
-
         return scheduleSlots;
     }
 } 

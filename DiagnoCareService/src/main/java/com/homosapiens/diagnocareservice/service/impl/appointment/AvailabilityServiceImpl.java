@@ -8,6 +8,7 @@ import com.homosapiens.diagnocareservice.model.entity.availability.WeekDay;
 import com.homosapiens.diagnocareservice.model.entity.appointment.ScheduleSlot;
 import com.homosapiens.diagnocareservice.model.entity.dtos.AvailabilityDto;
 import com.homosapiens.diagnocareservice.model.entity.dtos.AvailabilityResponseDto;
+import com.homosapiens.diagnocareservice.model.entity.dtos.AvailabilityEventDto;
 import com.homosapiens.diagnocareservice.model.entity.dtos.WeekDayDto;
 import com.homosapiens.diagnocareservice.model.mapper.AvailabilityMapper;
 import com.homosapiens.diagnocareservice.repository.AvailabilityRepository;
@@ -17,6 +18,8 @@ import com.homosapiens.diagnocareservice.service.ScheduleSlotService;
 import com.homosapiens.diagnocareservice.service.UserService;
 import com.homosapiens.diagnocareservice.service.WeekDayService;
 import com.homosapiens.diagnocareservice.service.impl.appointment.helper.AvailabilityHelper;
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.PersistenceContext;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
@@ -45,6 +48,8 @@ public class AvailabilityServiceImpl implements AvailabilityService {
     private final WeekDayService weekDayService;
     private final ScheduleSlotRepository scheduleSlotRepository;
     private static final Logger logger = LoggerFactory.getLogger(AvailabilityServiceImpl.class);
+    @PersistenceContext
+    private EntityManager entityManager;
 
     @Override
     @Transactional
@@ -71,9 +76,14 @@ public class AvailabilityServiceImpl implements AvailabilityService {
 
         Availability availability = availabilityMapper.toAvailability(availabilityDto);
         Availability savedAvailability = availabilityRepository.save(availability);
-        scheduleSlotService.createSlots(savedAvailability);
 
-        kafkaProducer.sendMessage(KafkaEvent.AVAILABILITY_CREATED.toString(), "Doctor Created Availability", savedAvailability);
+        AvailabilityEventDto eventDto = new AvailabilityEventDto(
+            savedAvailability.getId(),
+            savedAvailability.getUser().getId(),
+            "AVAILABILITY_CREATED",
+            "Doctor Created Availability"
+        );
+        kafkaProducer.sendMessage(KafkaEvent.AVAILABILITY_CREATED.toString(), "Doctor Created Availability", eventDto);
         return AvailabilityResponseDto.fromEntity(savedAvailability);
     }
 
@@ -104,36 +114,29 @@ public class AvailabilityServiceImpl implements AvailabilityService {
         Availability oldAvailability = lastSavedAvailability.get();
         boolean isUpdatable = availabilityHelper.checkAvailability(oldAvailability, oldAvailability);
 
-        if(isUpdatable){
-            // First delete generated availabilities
-            availabilityRepository.deleteByisGeneratedAndUserId(true,availabilityDto.getUserId());
-            
-            // Explicitly delete all slots for this availability by ID
-            List<ScheduleSlot> existingSlots = scheduleSlotRepository.findByAvailabilityId(id);
-            if (!existingSlots.isEmpty()) {
-                scheduleSlotRepository.deleteAll(existingSlots);
-            }
-
-            // Explicitly delete all old weekdays
-            Set<WeekDay> oldWeekDays = new HashSet<>(oldAvailability.getWeekDays());
-            if (!oldWeekDays.isEmpty()) {
-                weekDayService.deleteAllWeekDays(oldWeekDays);
-            }
-            oldAvailability.getWeekDays().clear();
-            availabilityRepository.save(oldAvailability);
+        if (isUpdatable) {
 
             // Re-fetch the managed Availability instance
-            Availability managedAvailability = availabilityRepository.findById(id).orElseThrow(() -> new AppException(HttpStatus.NOT_FOUND, "No such availability found after update"));
+            Availability managedAvailability = availabilityRepository.findById(id)
+                    .orElseThrow(() -> new AppException(HttpStatus.NOT_FOUND, "No such availability found after update"));
 
             // Update the existing availability with new data
-            managedAvailability.setRepeating(availabilityDto.isRepeating());
+
             managedAvailability.setRepeatUntil(availabilityDto.getRepeatUntil());
             managedAvailability.setAvailabilityDate(availabilityDto.getAvailabilityDate() != null ?
-                availabilityDto.getAvailabilityDate() : LocalDate.now());
-            availabilityRepository.save(managedAvailability);
+                    availabilityDto.getAvailabilityDate() : LocalDate.now());
+
+            // Delete all weekday
+           Set<WeekDay> weekDays = managedAvailability.getWeekDays();
+           weekDayService.deleteAllWeekDays(weekDays);
+
+           managedAvailability.getWeekDays().clear();
+
+
+           availabilityRepository.saveAndFlush(managedAvailability);
 
             // Now create and save new weekDays with proper availability reference
-            Set<WeekDay> weekDays = availabilityDto.getWeekDays().stream()
+            weekDays = availabilityDto.getWeekDays().stream()
                     .map(weekDayDto -> {
                         WeekDay weekDay = new WeekDay();
                         weekDay.setFromTime(weekDayDto.getFromTime());
@@ -146,16 +149,19 @@ public class AvailabilityServiceImpl implements AvailabilityService {
                     .collect(Collectors.toSet());
 
             // Save weekDays
-            List<WeekDay>   savedWeekDays =   weekDayService.saveAllWeekDay(weekDays);
+            List<WeekDay> savedWeekDays = weekDayService.saveAllWeekDay(weekDays);
 
             // Add weekDays to availability
             managedAvailability.getWeekDays().addAll(savedWeekDays);
             availabilityRepository.save(managedAvailability);
 
-            // Create new schedule slots
-            scheduleSlotService.createSlots(managedAvailability);
-
-            kafkaProducer.sendMessage(KafkaEvent.AVAILABILITY_CREATED.toString(), "Doctor Updated Availability", managedAvailability);
+            AvailabilityEventDto eventDto = new AvailabilityEventDto(
+                managedAvailability.getId(),
+                managedAvailability.getUser().getId(),
+                "AVAILABILITY_UPDATED",
+                "Doctor Updated Availability"
+            );
+            kafkaProducer.sendMessage(KafkaEvent.AVAILABILITY_UPDATED.toString(), "Doctor Updated Availability", eventDto);
 
             return AvailabilityResponseDto.fromEntity(managedAvailability);
         }
@@ -179,7 +185,13 @@ public class AvailabilityServiceImpl implements AvailabilityService {
 
             // Send Kafka event for availability deletion - the consumer will handle the complete deletion
             logger.info("Sending availability deletion event for ID: " + availability.getId());
-            kafkaProducer.sendMessage(KafkaEvent.AVAILABILITY_DELETED.toString(), "Doctor Deleted Availability", availability.getId());
+            AvailabilityEventDto eventDto = new AvailabilityEventDto(
+                availability.getId(),
+                availability.getUser().getId(),
+                "AVAILABILITY_DELETED",
+                "Doctor Deleted Availability"
+            );
+            kafkaProducer.sendMessage(KafkaEvent.AVAILABILITY_DELETED.toString(), "Doctor Deleted Availability", eventDto);
 
         } catch (AppException e) {
             // Re-throw the exception with a more specific message for deletion context
@@ -187,10 +199,6 @@ public class AvailabilityServiceImpl implements AvailabilityService {
         }
     }
 
-    @Override
-    public boolean generateAvailabilities(Long id) {
-        return false;
-    }
 
     private void validateWeekDayTimes(Set<WeekDayDto> weekDays) {
         if (weekDays == null || weekDays.isEmpty()) {

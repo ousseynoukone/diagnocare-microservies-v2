@@ -23,7 +23,7 @@ public class ScheduleSlotResponseDto {
         dto.setIsActive(slot.getIsActive());
         dto.setIsBooked(slot.isIsBooked());
         dto.setWeekDay(WeekDayResponseDto.fromEntity(slot.getWeekDay()));
-        dto.setAvailabilityId(slot.getAvailability().getId());
+        dto.setAvailabilityId(slot.getAvailability() != null ? slot.getAvailability().getId() : null);
         return dto;
     }
 } 

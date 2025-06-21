@@ -34,7 +34,7 @@ public class AvailabilityHelper {
     }
 
     private boolean isThereAnyBookedSlots(Availability availability) {
-     List<ScheduleSlot>  scheduleSlots =  scheduleSlotRepository.getScheduleSlotByAvailabilityId(availability.getId());
+     List<ScheduleSlot>  scheduleSlots =  scheduleSlotRepository.findByWeekDayAvailabilityId(availability.getId());
         return  scheduleSlots.stream().anyMatch(ScheduleSlot::isIsBooked);
     }
 

@@ -15,6 +15,5 @@ public interface AvailabilityService {
     Optional<AvailabilityResponseDto> getAvailabilityById(long id);
     AvailabilityResponseDto updateAvailability(AvailabilityDto availability, long id);
     void deleteAvailability(long id);
-    boolean generateAvailabilities(Long id);
 
 } 
