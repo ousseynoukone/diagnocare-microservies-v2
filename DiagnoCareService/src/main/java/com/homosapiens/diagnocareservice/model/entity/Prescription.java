@@ -27,7 +27,6 @@ public class Prescription {
 
     private LocalDateTime date;
 
-    private String identifiant_1;
 }
 
 enum PrescriptionType {

@@ -4,6 +4,7 @@ import com.homosapiens.diagnocareservice.model.entity.User;
 import jakarta.persistence.*;
 import lombok.Data;
 import org.aspectj.weaver.patterns.ConcreteCflowPointcut;
+import org.hibernate.annotations.CreationTimestamp;
 import org.springframework.data.annotation.CreatedDate;
 import org.springframework.data.annotation.LastModifiedDate;
 
@@ -33,10 +34,7 @@ public class Appointment {
     @Column(columnDefinition = "TEXT")
     private String reason;
 
-    @Enumerated(EnumType.STRING)
-    private AppointmentType appointmentType;
-
-    @CreatedDate
+    @CreationTimestamp
     private LocalDateTime createdAt;
 
     @LastModifiedDate

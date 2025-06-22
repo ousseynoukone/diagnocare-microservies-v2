@@ -28,7 +28,6 @@ public class Report {
     @JoinColumn(name = "appointment_id")
     private Appointment appointment;
 
-    private String identifiant_1;
 
     @Column(length = 255)
     private String reportType;
