@@ -100,21 +100,37 @@ public class AppointmentServiceImpl implements AppointmentService {
                 .orElseThrow(() -> new AppException(HttpStatus.NOT_FOUND, "Doctor not found"));
         User patient = userService.getUserById(appointmentDetails.getPatientId())
                 .orElseThrow(() -> new AppException(HttpStatus.NOT_FOUND, "Patient not found"));
-        ScheduleSlot slot = scheduleSlotRepository.findById(appointmentDetails.getScheduleSlotId())
+        ScheduleSlot newSlot = scheduleSlotRepository.findById(appointmentDetails.getScheduleSlotId())
                 .orElseThrow(() -> new AppException(HttpStatus.NOT_FOUND, "Schedule slot not found"));
 
-        // Check if the slot is active
-        if (slot.getIsActive() == null || !slot.getIsActive()) {
+        // Check if the new slot is active
+        if (newSlot.getIsActive() == null || !newSlot.getIsActive()) {
             throw new AppException(HttpStatus.BAD_REQUEST, "Cannot book an inactive slot");
         }
 
-        Appointment updatedAppointment = appointmentMapper.toEntity(appointmentDetails, doctor, patient, slot);
+        // Check if the new slot is already booked (and not by this appointment)
+        if (newSlot.isIsBooked() && !newSlot.getId().equals(appointment.getSlot().getId())) {
+            throw new AppException(HttpStatus.CONFLICT, "The selected slot is already booked");
+        }
+
+        // Get the old slot before updating
+        ScheduleSlot oldSlot = appointment.getSlot();
+        boolean isChangingSlot = !oldSlot.getId().equals(newSlot.getId());
+
+        Appointment updatedAppointment = appointmentMapper.toEntity(appointmentDetails, doctor, patient, newSlot);
         validateAppointmentTime(updatedAppointment);
+
+        // If changing slots, unbook the old slot and book the new one
+        if (isChangingSlot) {
+            oldSlot.setIsBooked(false);
+            scheduleSlotRepository.save(oldSlot);
+            newSlot.setIsBooked(true);
+            scheduleSlotRepository.save(newSlot);
+        }
 
         appointment.setSlot(updatedAppointment.getSlot());
         appointment.setReason(updatedAppointment.getReason());
         appointment.setType(updatedAppointment.getType());
-
 
         return appointmentMapper.toDto(appointmentRepository.save(appointment));
     }
@@ -123,6 +139,14 @@ public class AppointmentServiceImpl implements AppointmentService {
     public void deleteAppointment(Long id) {
         Appointment appointment = appointmentRepository.findById(id)
                 .orElseThrow(() -> new AppException(HttpStatus.NOT_FOUND, "Appointment not found with id: " + id));
+        
+        // Unbook the slot before deleting the appointment
+        ScheduleSlot slot = appointment.getSlot();
+        if (slot != null) {
+            slot.setIsBooked(false);
+            scheduleSlotRepository.save(slot);
+        }
+        
         appointmentRepository.delete(appointment);
     }
 
@@ -133,6 +157,15 @@ public class AppointmentServiceImpl implements AppointmentService {
         
         validateStatusTransition(appointment.getStatus(), newStatus);
         appointment.setStatus(newStatus);
+        
+        // If status is changed to CANCELLED, unbook the slot
+        if (newStatus == AppointmentStatus.CANCELLED) {
+            ScheduleSlot slot = appointment.getSlot();
+            if (slot != null) {
+                slot.setIsBooked(false);
+                scheduleSlotRepository.save(slot);
+            }
+        }
         
         return appointmentMapper.toDto(appointmentRepository.save(appointment));
     }
@@ -171,15 +204,29 @@ public class AppointmentServiceImpl implements AppointmentService {
 
     @Override
     public AppointmentResponseDto cancelAppointment(Long id) {
-        Optional<Appointment> appointmentOptional = appointmentRepository.findById(id);
-        if (appointmentOptional.isPresent()) {
-            Appointment appointment = appointmentOptional.get();
-            appointment.setStatus(AppointmentStatus.CANCELLED);
-         return appointmentMapper.toDto( appointmentRepository.save(appointment))  ;
-        }else {
-            throw new AppException(HttpStatus.NOT_FOUND, "Appointment not found with id: " + id);
+        Appointment appointment = appointmentRepository.findById(id)
+                .orElseThrow(() -> new AppException(HttpStatus.NOT_FOUND, "Appointment not found with id: " + id));
+        
+        // Validate that appointment can be cancelled
+        if (appointment.getStatus() == AppointmentStatus.COMPLETED) {
+            throw new AppException(HttpStatus.BAD_REQUEST, "Cannot cancel a completed appointment");
         }
-
+        
+        if (appointment.getStatus() == AppointmentStatus.CANCELLED) {
+            throw new AppException(HttpStatus.BAD_REQUEST, "Appointment is already cancelled");
+        }
+        
+        // Set status to cancelled
+        appointment.setStatus(AppointmentStatus.CANCELLED);
+        
+        // Unbook the slot to make it available again
+        ScheduleSlot slot = appointment.getSlot();
+        if (slot != null) {
+            slot.setIsBooked(false);
+            scheduleSlotRepository.save(slot);
+        }
+        
+        return appointmentMapper.toDto(appointmentRepository.save(appointment));
     }
 
     @Override
@@ -250,16 +297,34 @@ public class AppointmentServiceImpl implements AppointmentService {
     }
 
     private void validateStatusTransition(AppointmentStatus currentStatus, AppointmentStatus newStatus) {
+        // Cannot change status of completed appointments
         if (currentStatus == AppointmentStatus.COMPLETED) {
             throw new AppException(HttpStatus.BAD_REQUEST, "Cannot change status of completed appointment");
         }
 
-        if (currentStatus == AppointmentStatus.CANCELLED) {
+        // Cannot change status of cancelled appointments (unless it's already cancelled, which is handled above)
+        if (currentStatus == AppointmentStatus.CANCELLED && newStatus != AppointmentStatus.CANCELLED) {
             throw new AppException(HttpStatus.BAD_REQUEST, "Cannot change status of cancelled appointment");
         }
 
+        // Valid transitions:
+        // SCHEDULED -> CONFIRMED, CANCELLED
+        // CONFIRMED -> COMPLETED, CANCELLED
+        // Cannot skip CONFIRMED state when going to COMPLETED
         if (currentStatus == AppointmentStatus.SCHEDULED && newStatus == AppointmentStatus.COMPLETED) {
-            throw new AppException(HttpStatus.BAD_REQUEST, "Cannot mark scheduled appointment as completed");
+            throw new AppException(HttpStatus.BAD_REQUEST, 
+                "Cannot mark scheduled appointment as completed. Appointment must be confirmed first.");
+        }
+
+        // Cannot go backwards from CONFIRMED to SCHEDULED
+        if (currentStatus == AppointmentStatus.CONFIRMED && newStatus == AppointmentStatus.SCHEDULED) {
+            throw new AppException(HttpStatus.BAD_REQUEST, 
+                "Cannot change confirmed appointment back to scheduled status");
+        }
+
+        // Cannot go backwards from COMPLETED to any other status (already handled above, but explicit)
+        if (currentStatus == AppointmentStatus.COMPLETED) {
+            throw new AppException(HttpStatus.BAD_REQUEST, "Cannot change status of completed appointment");
         }
     }
 } 
