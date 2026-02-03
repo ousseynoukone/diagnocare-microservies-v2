@@ -16,4 +16,6 @@ public class SessionSymptomRequestDTO {
     private String rawDescription;
 
     private List<Long> symptomIds;
+    
+    private String language; // "fr" or "en", optional, default: "fr"
 }

@@ -13,6 +13,7 @@ public interface DoctorService {
     Optional<Doctor> getDoctorById(Long id);
     List<Doctor> getAllDoctors();
     List<Doctor> searchDoctorsBySpecialty(String specialty);
+    Optional<Doctor> getDoctorBySpecialistLabel(String specialistLabel);
     DoctorDTO convertToDTO(Doctor doctor);
     List<DoctorDTO> convertToDTOList(List<Doctor> doctors);
 }

@@ -57,6 +57,12 @@ public class DoctorServiceImpl implements DoctorService {
     }
 
     @Override
+    @Transactional(readOnly = true)
+    public Optional<Doctor> getDoctorBySpecialistLabel(String specialistLabel) {
+        return doctorRepository.findBySpecialistLabel(specialistLabel);
+    }
+
+    @Override
     public DoctorDTO convertToDTO(Doctor doctor) {
         DoctorDTO dto = new DoctorDTO();
         dto.setId(doctor.getId());

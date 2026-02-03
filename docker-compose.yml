@@ -137,6 +137,28 @@ services:
       kafka:
         condition: service_healthy
 
+  # ML Prediction Service (Flask)
+  ml-prediction-service:
+    build: ./MlPredictionService/.
+    container_name: ml-prediction-service
+    restart: always
+    ports:
+      - "5000:5000"
+    environment:
+      - FLASK_ENV=production
+      - FLASK_APP=app.py
+    volumes:
+      - ./MlPredictionService/models:/app/models
+      - ./MlPredictionService/data:/app/data
+    healthcheck:
+      test: ["CMD", "python", "-c", "import requests; requests.get('http://localhost:5000/health')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    depends_on:
+      - kafka
+
 volumes:
   postgres_data:
   pgadmin_data:
