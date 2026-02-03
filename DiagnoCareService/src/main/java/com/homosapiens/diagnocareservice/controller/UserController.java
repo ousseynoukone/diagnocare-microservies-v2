@@ -75,17 +75,5 @@ public class UserController {
                 .orElse(ResponseEntity.notFound().build());
     }
 
-    @GetMapping("/stripe/{stripeCustomerId}")
-    public ResponseEntity<User> getUserByStripeCustomerId(@PathVariable String stripeCustomerId) {
-        return userService.getUserByStripeCustomerId(stripeCustomerId)
-                .map(ResponseEntity::ok)
-                .orElse(ResponseEntity.notFound().build());
-    }
 
-    @GetMapping("/npi/{npi}")
-    public ResponseEntity<User> getUserByNpi(@PathVariable String npi) {
-        return userService.getUserByNpi(npi)
-                .map(ResponseEntity::ok)
-                .orElse(ResponseEntity.notFound().build());
-    }
 } 

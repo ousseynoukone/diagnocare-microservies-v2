@@ -46,36 +46,7 @@ public class GlobalExceptionHandler {
         return new ResponseEntity<>(response, HttpStatus.BAD_REQUEST);
     }
 
-    @ExceptionHandler(HttpMessageNotReadableException.class)
-    public ResponseEntity<Map<String, Object>> handleHttpMessageNotReadableException(HttpMessageNotReadableException ex) {
-        Map<String, Object> response = new HashMap<>();
-        response.put("timestamp", java.time.LocalDateTime.now());
-        response.put("status", HttpStatus.BAD_REQUEST.value());
-        response.put("error", "Bad Request");
 
-        String message = "Invalid request format";
-
-        if (ex.getCause() instanceof InvalidFormatException) {
-            InvalidFormatException formatEx = (InvalidFormatException) ex.getCause();
-            if (formatEx.getTargetType() == java.time.LocalDate.class) {
-                String invalidValue = formatEx.getValue().toString();
-                message = String.format(
-                        "Invalid date format: '%s'. Expected format: YYYY-MM-DD (e.g., 2025-12-31). " +
-                                "Please check your date values and ensure they are in the correct format.",
-                        invalidValue
-                );
-            }
-        } else if (ex.getCause() instanceof MismatchedInputException) {
-            MismatchedInputException mismatchEx = (MismatchedInputException) ex.getCause();
-            if (mismatchEx.getTargetType() == java.time.LocalDate.class) {
-                message = "Invalid date format. Expected format: YYYY-MM-DD (e.g., 2025-12-31). " +
-                        "Please check your date values and ensure they are in the correct format.";
-            }
-        }
-
-        response.put("message", message);
-        return new ResponseEntity<>(response, HttpStatus.BAD_REQUEST);
-    }
 
     @ExceptionHandler(Exception.class)
     public ResponseEntity<Map<String, Object>> handleGenericException(Exception ex) {

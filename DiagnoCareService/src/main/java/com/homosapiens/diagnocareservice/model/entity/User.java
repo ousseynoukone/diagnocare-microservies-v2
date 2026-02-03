@@ -2,6 +2,7 @@ package com.homosapiens.diagnocareservice.model.entity;
 
 import jakarta.persistence.*;
 import lombok.Data;
+import lombok.EqualsAndHashCode;
 import org.hibernate.annotations.CreationTimestamp;
 import org.springframework.data.annotation.LastModifiedDate;
 
@@ -10,13 +11,11 @@ import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 
+@EqualsAndHashCode(callSuper = false)
 @Data
 @Entity
 @Table(name = "users")
-public class User {
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+public class User extends BaseEntity{
 
     @Column(length = 100)
     private String firstName;
@@ -45,32 +44,7 @@ public class User {
             inverseJoinColumns = @JoinColumn(name = "role_id", referencedColumnName = "id"))
     private List<Role> roles = new ArrayList<>();
 
-    // Doctor specific fields
-    @Column(length = 255)
-    private String stripeCustomerId;
 
-    @ManyToOne(cascade = CascadeType.ALL, fetch = FetchType.EAGER)
-    private Clinic clinic;
-
-    @Column(length = 11)
-    private String npi;
-
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "specialization_id")
-    private Specialization specialization;
-
-    // Patient specific fields
-    @Column(length = 13)
-    private String healthAssuranceNumber;
-    
-    @Column(length = 50)
-    private String credit;
-
-    @CreationTimestamp
-    @Column(updatable = false, name = "created_at")
-    private Date createdAt;
-
-    @LastModifiedDate
-    @Column(updatable = false, name = "updated_at")
-    private Date updatedAt;
+    @OneToMany(cascade = CascadeType.ALL,fetch = FetchType.EAGER)
+    private List<SessionSymptom> sessionSymptom;
 } 

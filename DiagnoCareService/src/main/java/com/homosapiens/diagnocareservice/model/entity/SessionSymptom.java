@@ -1,20 +1,34 @@
 package com.homosapiens.diagnocareservice.model.entity;
 
-
 import jakarta.persistence.*;
-import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
+import lombok.Data;
+import lombok.EqualsAndHashCode;
 
-@Entity(name = "session_symptomes")
-public class SessionSymptome  extends BaseEntity{
-    @ManyToOne
+import java.util.List;
+
+@EqualsAndHashCode(callSuper = false)
+@Data
+@Entity
+@Table(name = "symptome_session")
+public class SessionSymptom extends BaseEntity {
+    
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "user_id", nullable = false)
     private User user;
 
-    @Column(nullable = false)
+    @Column(name = "raw_description", columnDefinition = "TEXT", nullable = false)
     @NotBlank(message = "Description ne doit pas etre nul")
-    private String  description;
+    private String rawDescription;
 
+    @ManyToMany(cascade = {CascadeType.PERSIST, CascadeType.MERGE})
+    @JoinTable(
+        name = "symptome_session_symptome",
+        joinColumns = @JoinColumn(name = "symptome_session_id"),
+        inverseJoinColumns = @JoinColumn(name = "symptome_id")
+    )
+    private List<Symptom> symptoms;
 
-
-
+    @OneToMany(mappedBy = "sessionSymptom", cascade = CascadeType.ALL)
+    private List<Prediction> predictions;
 }

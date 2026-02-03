@@ -1,7 +1,10 @@
 package com.homosapiens.diagnocareservice.model.entity;
 
+import com.homosapiens.diagnocareservice.model.entity.enums.GenderEnum;
 import jakarta.persistence.*;
 import lombok.Data;
+
+import java.util.Set;
 
 @Data
 @Entity
@@ -11,23 +14,45 @@ public class PatientMedicalProfile {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    @Column
     private Boolean isSmoking;
+
+    @Column
+    private int age;
 
     @Enumerated(EnumType.STRING)
     @Column(length = 10)
-    private Gender gender;
+    private GenderEnum gender;
 
+    @Column
     private Float weight;
-    private Float height;
 
     @OneToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "user_id")
+    @JoinColumn(name = "user_id", nullable = false)
     private User user;
 
-    private String identifiant_1;
+    @Column(nullable = true , name = "mean_bp")
+    private Float meanBloodPressure;
+
+    @Column(nullable = true , name = "mean_chol")
+    private Float meanCholesterol;
+
+    @Column
+    private Boolean sedentary;
+
+    @Column
+    private int bmi;
+
+    @Column
+    private Boolean alcohol;
+
+    @ElementCollection(fetch = FetchType.EAGER)
+    private Set<String> familyAntecedents;
+
+
+
+
+
+
 }
 
-enum Gender {
-    MALE,
-    FEMALE
-}

@@ -113,6 +113,13 @@
 			<groupId>org.springframework.boot</groupId>
 			<artifactId>spring-boot-starter-data-mongodb</artifactId>
 		</dependency>
+
+		<!-- PDF Generation -->
+		<dependency>
+			<groupId>com.itextpdf</groupId>
+			<artifactId>html2pdf</artifactId>
+			<version>5.0.1</version>
+		</dependency>
 	</dependencies>
 	<dependencyManagement>
 		<dependencies>
