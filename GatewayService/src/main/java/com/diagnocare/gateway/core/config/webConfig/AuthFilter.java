@@ -100,6 +100,7 @@ public class AuthFilter extends AbstractGatewayFilterFactory<AuthFilter.Config> 
                                 .header("x-auth-user-id", String.valueOf(userDto.getId()))
                                 .header("x-auth-user-email", userDto.getEmail())
                                 .header("x-auth-user-role", userDto.getRole())
+                                .header("x-auth-user-lang", userDto.getLang() != null ? userDto.getLang() : "fr")
                                 .build();
 
                         return chain.filter(exchange.mutate().request(mutatedRequest).build());

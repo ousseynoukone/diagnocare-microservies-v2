@@ -11,6 +11,7 @@ import com.homosapiens.authservice.model.dtos.UserRegisterDto;
 import com.homosapiens.authservice.model.dtos.UserUpdateDto;
 import com.homosapiens.authservice.service.AuthService;
 import com.homosapiens.authservice.service.helpers.ValidationHelper;
+import com.homosapiens.authservice.core.locale.LanguageUtil;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -23,6 +24,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.BindingResult;
 import org.springframework.web.bind.annotation.*;
+import jakarta.servlet.http.HttpServletRequest;
 
 import java.util.List;
 import java.util.Map;
@@ -36,9 +38,9 @@ public class AuthController {
 
     @PostMapping("login")
     @Operation(summary = "Login", description = "Authenticate user and return access + refresh tokens")
-    private ResponseEntity<?> login(@RequestBody @Valid UserLoginDto user , BindingResult bindingResult) {
+    private ResponseEntity<?> login(@RequestBody @Valid UserLoginDto user , BindingResult bindingResult, HttpServletRequest request) {
         if (bindingResult.hasErrors()) {
-            return ValidationHelper.buildValidationReponse(bindingResult);
+            return ValidationHelper.buildValidationReponse(bindingResult, LanguageUtil.resolveLang(request));
         }
         if(user!=null){
                 Object response =  this.authService.login(user);
@@ -47,17 +49,17 @@ public class AuthController {
         return  ResponseEntity.status(HttpStatus.BAD_REQUEST).body(
                 CustomResponseEntity.builder()
                         .statusCode(HttpStatus.BAD_REQUEST.value())
-                        .message("All User informations are required"));
+                        .message(LanguageUtil.translateMessage("All User informations are required", LanguageUtil.resolveLang(request))));
     }
 
 
 
     @PostMapping("register")
     @Operation(summary = "Register", description = "Create a new user account")
-    private ResponseEntity<?> register(@RequestBody @Valid UserRegisterDto user , BindingResult bindingResult) {
+    private ResponseEntity<?> register(@RequestBody @Valid UserRegisterDto user , BindingResult bindingResult, HttpServletRequest request) {
 
         if (bindingResult.hasErrors()) {
-            return ValidationHelper.buildValidationReponse(bindingResult);
+            return ValidationHelper.buildValidationReponse(bindingResult, LanguageUtil.resolveLang(request));
         }
 
         if(user!=null){
@@ -70,7 +72,7 @@ public class AuthController {
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(
                 CustomResponseEntity.builder()
                         .statusCode(HttpStatus.INTERNAL_SERVER_ERROR.value())
-                        .message("CHEEZ BRO , UR CODES ARE A MESS ! THIS IS SUCH A MASTERPIECE OF SHIT")
+                        .message(LanguageUtil.translateMessage("CHEEZ BRO , UR CODES ARE A MESS ! THIS IS SUCH A MASTERPIECE OF SHIT", LanguageUtil.resolveLang(request)))
         );
     }
 
@@ -79,9 +81,10 @@ public class AuthController {
     public ResponseEntity<?> updateUser(
             @PathVariable Long id,
             @RequestBody @Valid UserUpdateDto updateDto,
-            BindingResult bindingResult) {
+            BindingResult bindingResult,
+            HttpServletRequest request) {
         if (bindingResult.hasErrors()) {
-            return ValidationHelper.buildValidationReponse(bindingResult);
+            return ValidationHelper.buildValidationReponse(bindingResult, LanguageUtil.resolveLang(request));
         }
         return ResponseEntity.ok(authService.updateUser(id, updateDto));
     }
@@ -95,12 +98,13 @@ public class AuthController {
 
     @PostMapping("refresh-token")
     @Operation(summary = "Refresh token", description = "Issue a new access token using a refresh token")
-    public ResponseEntity<?> refreshToken(@RequestBody RefreshTokenRequest request) {
+    public ResponseEntity<?> refreshToken(@RequestBody RefreshTokenRequest request, HttpServletRequest servletRequest) {
         if (request.getRefreshToken() == null || request.getRefreshToken().isEmpty()) {
+            String lang = LanguageUtil.resolveLang(servletRequest);
             return ResponseEntity.badRequest().body(
                     CustomResponseEntity.builder()
                             .statusCode(HttpStatus.BAD_REQUEST.value())
-                            .message("Refresh token is required")
+                            .message(LanguageUtil.translateMessage("Refresh token is required", lang))
                             .build()
             );
         }

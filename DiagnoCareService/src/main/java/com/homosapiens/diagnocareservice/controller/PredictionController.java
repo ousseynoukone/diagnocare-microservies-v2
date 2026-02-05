@@ -48,7 +48,7 @@ public class PredictionController {
             // Resolve language from user profile (default: "fr")
             String language = resolveUserLanguage(
                     sessionSymptomRequestDTO.getUserId(),
-                    sessionSymptomRequestDTO.getLanguage()
+                    null
             );
             
             // Use explicit symptoms (English) for prediction

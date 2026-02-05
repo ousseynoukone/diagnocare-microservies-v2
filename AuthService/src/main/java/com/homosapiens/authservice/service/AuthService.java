@@ -144,6 +144,7 @@ public class AuthService {
                 .email(u.getEmail())
                 .id(u.getId())
                 .roles(u.getRoles())
+                .lang(u.getLang())
                 .build();
     }
 

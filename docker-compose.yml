@@ -62,11 +62,12 @@ services:
     build: ./AuthService/.
     restart: always
     ports:
-      - '8081:8081'
+      - '${AUTH_PORT:-8081}:8081'
     env_file:
       - .env
     environment:
       - SPRING_DATASOURCE_URL=jdbc:postgresql://auth-postgres:5432/${AUTH_DB_NAME:-auth_db}
+      - KAFKA_BOOTSTRAP_SERVERS=kafka:9092
       - SPRING_KAFKA_BOOTSTRAP_SERVERS=kafka:9092
       - eureka.client.serviceUrl.defaultZone=http://registry-service:8761/eureka/
     depends_on:
@@ -84,6 +85,7 @@ services:
       - .env
     environment:
       - SPRING_DATASOURCE_URL=jdbc:postgresql://diagnocare-postgres:5432/${DIAGNOCARE_DB_NAME:-diagnocare_db}
+      - KAFKA_BOOTSTRAP_SERVERS=kafka:9092
       - SPRING_KAFKA_BOOTSTRAP_SERVERS=kafka:9092
       - eureka.client.serviceUrl.defaultZone=http://registry-service:8761/eureka/
     depends_on:

@@ -36,7 +36,8 @@ public class SessionSymptomServiceImpl implements SessionSymptomService {
 
         SessionSymptom sessionSymptom = new SessionSymptom();
         sessionSymptom.setUser(user);
-        sessionSymptom.setRawDescription(requestDTO.getRawDescription());
+        String rawDescription = requestDTO.getRawDescription();
+        sessionSymptom.setRawDescription(rawDescription != null ? rawDescription : "");
 
         List<Symptom> symptoms = requestDTO.getSymptomIds().stream()
                 .map(id -> symptomRepository.findById(id)

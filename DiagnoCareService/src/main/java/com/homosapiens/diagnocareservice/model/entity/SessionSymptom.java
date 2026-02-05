@@ -1,7 +1,6 @@
 package com.homosapiens.diagnocareservice.model.entity;
 
 import jakarta.persistence.*;
-import jakarta.validation.constraints.NotBlank;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 
@@ -17,8 +16,7 @@ public class SessionSymptom extends BaseEntity {
     @JoinColumn(name = "user_id", nullable = false)
     private User user;
 
-    @Column(name = "raw_description", columnDefinition = "TEXT", nullable = false)
-    @NotBlank(message = "Description ne doit pas etre nul")
+    @Column(name = "raw_description", columnDefinition = "TEXT")
     private String rawDescription;
 
     @ManyToMany(cascade = {CascadeType.PERSIST, CascadeType.MERGE})

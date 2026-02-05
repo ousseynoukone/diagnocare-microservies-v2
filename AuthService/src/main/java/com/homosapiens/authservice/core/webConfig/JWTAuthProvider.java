@@ -59,10 +59,13 @@ public class JWTAuthProvider {
 
 
         // Create the JWT access token
+        String lang = user.getLang() != null ? user.getLang() : "fr";
+
         String token = JWT.create()
                 .withIssuer(user.getEmail())
                 .withClaim("id", user.getId())
                 .withClaim("roles", roleNames)
+                .withClaim("lang", lang)
                 .withIssuedAt(now)
                 .withExpiresAt(validity)
                 .sign(Algorithm.HMAC256(secretKey));
@@ -84,6 +87,8 @@ public class JWTAuthProvider {
                 .map(role -> role.getName().name())
                 .collect(Collectors.toList());
 
+        String lang = user.getLang() != null ? user.getLang() : "fr";
+
         String refreshToken = JWT.create()
                 .withIssuer(user.getEmail())
                 .withClaim("id", user.getId())
@@ -91,6 +96,7 @@ public class JWTAuthProvider {
                 .withIssuedAt(now)
                 .withExpiresAt(validity)
                 .withClaim("tokenType", "refresh")
+                .withClaim("lang", lang)
                 .sign(Algorithm.HMAC256(refreshSecretKey));
 
         Map<String, Object> response = new HashMap<>();
@@ -123,6 +129,8 @@ public class JWTAuthProvider {
             userData.put("id", decoded.getClaim("id").asLong());
             userData.put("email", decoded.getIssuer());
             userData.put("roles", roles);
+            String lang = decoded.getClaim("lang").asString();
+            userData.put("lang", lang != null ? lang : "fr");
             UserDetails userDetails = customUserDetails.loadUserByUsername(decoded.getIssuer());
 
             return new UsernamePasswordAuthenticationToken(userData, userDetails.getPassword(), userDetails.getAuthorities());
@@ -158,6 +166,8 @@ public class JWTAuthProvider {
             userData.put("id", decoded.getClaim("id").asLong());
             userData.put("email", decoded.getIssuer());
             userData.put("roles", roles);
+            String lang = decoded.getClaim("lang").asString();
+            userData.put("lang", lang != null ? lang : "fr");
             UserDetails userDetails = customUserDetails.loadUserByUsername(decoded.getIssuer());
 
             return new UsernamePasswordAuthenticationToken(userData, userDetails.getPassword(), userDetails.getAuthorities());

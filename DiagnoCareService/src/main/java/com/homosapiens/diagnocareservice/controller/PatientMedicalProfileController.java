@@ -28,6 +28,14 @@ public class PatientMedicalProfileController {
         return ResponseEntity.status(HttpStatus.CREATED).body(profileService.convertToDTO(profile));
     }
 
+    @PutMapping
+    @Operation(summary = "Update patient medical profile", description = "Updates an existing patient medical profile")
+    public ResponseEntity<PatientMedicalProfileDTO> updateProfile(
+            @Valid @RequestBody PatientMedicalProfileRequestDTO requestDTO) {
+        var profile = profileService.createOrUpdateProfile(requestDTO);
+        return ResponseEntity.ok(profileService.convertToDTO(profile));
+    }
+
     @DeleteMapping("/{id}")
     @Operation(summary = "Delete patient medical profile", description = "Deletes a patient medical profile by ID")
     public ResponseEntity<Void> deleteProfile(
