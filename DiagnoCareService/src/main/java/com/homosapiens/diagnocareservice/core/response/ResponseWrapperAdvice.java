@@ -33,12 +33,13 @@ public class ResponseWrapperAdvice implements ResponseBodyAdvice<Object> {
         int statusCode = HttpStatus.OK.value();
         if (response instanceof ServletServerHttpResponse servletResponse && servletResponse.getServletResponse() != null) {
             statusCode = servletResponse.getServletResponse().getStatus();
-        } else if (response.getStatusCode() != null) {
-            statusCode = response.getStatusCode().value();
         }
 
         String lang = resolveLang(request);
         String message = "en".equals(lang) ? "Success" : "Succès";
+        if (statusCode >= 400) {
+            message = "en".equals(lang) ? "Error" : "Erreur";
+        }
 
         return CustomResponseEntity.builder()
                 .statusCode(statusCode)

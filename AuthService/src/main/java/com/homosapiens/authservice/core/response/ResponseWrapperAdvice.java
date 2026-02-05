@@ -40,6 +40,9 @@ public class ResponseWrapperAdvice implements ResponseBodyAdvice<Object> {
 
         String lang = resolveLang(request);
         String message = "en".equals(lang) ? "Success" : "Succès";
+        if (statusCode >= 400) {
+            message = "en".equals(lang) ? "Error" : "Erreur";
+        }
 
         return CustomResponseEntity.builder()
                 .statusCode(statusCode)

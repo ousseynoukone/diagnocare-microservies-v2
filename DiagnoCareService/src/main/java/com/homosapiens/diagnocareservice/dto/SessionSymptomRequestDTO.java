@@ -13,4 +13,6 @@ public class SessionSymptomRequestDTO {
     private String rawDescription;
 
     private List<Long> symptomIds;
+
+    private List<String> symptomLabels;
 }

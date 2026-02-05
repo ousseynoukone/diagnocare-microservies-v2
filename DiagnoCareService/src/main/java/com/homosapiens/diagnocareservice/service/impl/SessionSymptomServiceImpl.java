@@ -39,10 +39,24 @@ public class SessionSymptomServiceImpl implements SessionSymptomService {
         String rawDescription = requestDTO.getRawDescription();
         sessionSymptom.setRawDescription(rawDescription != null ? rawDescription : "");
 
-        List<Symptom> symptoms = requestDTO.getSymptomIds().stream()
-                .map(id -> symptomRepository.findById(id)
-                        .orElseThrow(() -> new AppException(HttpStatus.NOT_FOUND, "Symptom not found with id: " + id)))
-                .collect(Collectors.toList());
+        List<Symptom> symptoms;
+        if (requestDTO.getSymptomIds() != null && !requestDTO.getSymptomIds().isEmpty()) {
+            symptoms = requestDTO.getSymptomIds().stream()
+                    .map(id -> symptomRepository.findById(id)
+                            .orElseThrow(() -> new AppException(HttpStatus.NOT_FOUND, "Symptom not found with id: " + id)))
+                    .collect(Collectors.toList());
+        } else if (requestDTO.getSymptomLabels() != null && !requestDTO.getSymptomLabels().isEmpty()) {
+            symptoms = requestDTO.getSymptomLabels().stream()
+                    .map(label -> symptomRepository.findByLabel(label)
+                            .orElseGet(() -> {
+                                Symptom symptom = new Symptom();
+                                symptom.setLabel(label);
+                                return symptomRepository.save(symptom);
+                            }))
+                    .collect(Collectors.toList());
+        } else {
+            throw new AppException(HttpStatus.BAD_REQUEST, "Symptoms are required");
+        }
 
         sessionSymptom.setSymptoms(symptoms);
         return sessionSymptomRepository.save(sessionSymptom);
@@ -61,6 +75,16 @@ public class SessionSymptomServiceImpl implements SessionSymptomService {
             List<Symptom> symptoms = requestDTO.getSymptomIds().stream()
                     .map(symptomId -> symptomRepository.findById(symptomId)
                             .orElseThrow(() -> new AppException(HttpStatus.NOT_FOUND, "Symptom not found with id: " + symptomId)))
+                    .collect(Collectors.toList());
+            sessionSymptom.setSymptoms(symptoms);
+        } else if (requestDTO.getSymptomLabels() != null && !requestDTO.getSymptomLabels().isEmpty()) {
+            List<Symptom> symptoms = requestDTO.getSymptomLabels().stream()
+                    .map(label -> symptomRepository.findByLabel(label)
+                            .orElseGet(() -> {
+                                Symptom symptom = new Symptom();
+                                symptom.setLabel(label);
+                                return symptomRepository.save(symptom);
+                            }))
                     .collect(Collectors.toList());
             sessionSymptom.setSymptoms(symptoms);
         }

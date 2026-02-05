@@ -36,7 +36,7 @@ public class PredictionController {
 
     @PostMapping
     @Operation(summary = "Create a new prediction", description = "Creates a new AI prediction based on symptom session")
-    public ResponseEntity<PredictionDTO> makePrediction(
+    public ResponseEntity<PredictionWithResultsResponse> makePrediction(
             @Valid @RequestBody SessionSymptomRequestDTO sessionSymptomRequestDTO) {
         
         try {
@@ -91,7 +91,12 @@ public class PredictionController {
             createPathologyResults(created, mlResponse, language);
             
             log.info("Prediction created successfully with id: {}", created.getId());
-            return ResponseEntity.status(HttpStatus.CREATED).body(predictionService.convertToDTO(created));
+            PredictionDTO predictionDTO = predictionService.convertToDTO(created);
+            PredictionWithResultsResponse response = PredictionWithResultsResponse.builder()
+                    .prediction(predictionDTO)
+                    .mlResults(mlResponse)
+                    .build();
+            return ResponseEntity.status(HttpStatus.CREATED).body(response);
             
         } catch (Exception e) {
             log.error("Error creating prediction", e);
@@ -204,15 +209,23 @@ public class PredictionController {
         if (mlResponse.getPredictions() == null || mlResponse.getPredictions().isEmpty()) {
             return BigDecimal.ZERO;
         }
-        
-        // Average of top 3 predictions
-        double sum = mlResponse.getPredictions().stream()
-                .limit(3)
-                .mapToDouble(p -> p.getProbability() != null ? p.getProbability() : 0.0)
-                .sum();
-        
-        int count = Math.min(3, mlResponse.getPredictions().size());
-        return BigDecimal.valueOf(sum / count);
+
+        // Weighted score: give more importance to top prediction
+        double[] weights = {0.6, 0.3, 0.1};
+        double weightedSum = 0.0;
+        double weightTotal = 0.0;
+
+        for (int i = 0; i < Math.min(3, mlResponse.getPredictions().size()); i++) {
+            Double prob = mlResponse.getPredictions().get(i).getProbability();
+            double value = prob != null ? prob : 0.0;
+            weightedSum += value * weights[i];
+            weightTotal += weights[i];
+        }
+
+        if (weightTotal == 0.0) {
+            return BigDecimal.ZERO;
+        }
+        return BigDecimal.valueOf(weightedSum / weightTotal);
     }
     
     private void createPathologyResults(Prediction prediction, MLPredictionResponseDTO mlResponse, String language) {
