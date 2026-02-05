@@ -1,4 +1,5 @@
 from flask import Flask, request, jsonify
+from flasgger import Swagger
 import joblib
 import pandas as pd
 import numpy as np
@@ -9,10 +10,28 @@ from nlp_service import (
     extract_symptoms_from_text,
     translate_disease,
     translate_specialist,
-    generate_prediction_explanation
+    generate_prediction_explanation,
+    translate_symptom
 )
 
 app = Flask(__name__)
+app.config["SWAGGER"] = {
+    "title": "DiagnoCare ML API",
+    "uiversion": 3,
+    "openapi": "3.0.2",
+}
+swagger_template = {
+    "openapi": "3.0.2",
+    "info": {
+        "title": "DiagnoCare ML API",
+        "version": "1.0"
+    },
+    "servers": [
+        {"url": "http://localhost:5000", "description": "Local ML Service"},
+        {"url": "http://localhost:8765", "description": "Gateway"}
+    ]
+}
+Swagger(app, template=swagger_template)
 
 # --- CONFIGURATION ---
 MODELS_DIR = 'models'
@@ -39,16 +58,90 @@ try:
     print("Translations loaded successfully.")
 except Exception as e:
     print(f"Error loading translations: {e}")
-    translations = {"diseases": {}, "specialists": {}}
+    translations = {"diseases": {}, "specialists": {}, "symptoms": {}}
 
 # --- HELPER FUNCTIONS ---
 def clean_text(text):
-    if pd.isna(text): return ""
-    return "_".join(re.sub(r'[^\w\s]', '', str(text).strip().lower()).split())
+    if pd.isna(text):
+        return ""
+    normalized = str(text).strip().lower()
+    normalized = normalized.replace("-", " ").replace("/", " ")
+    return "_".join(re.sub(r'[^\w\s]', '', normalized).split())
 
 @app.route('/health', methods=['GET'])
 def health_check():
+    """
+    Health check
+    ---
+    tags:
+      - Health
+    responses:
+      200:
+        description: Service is healthy
+    """
     return jsonify({"status": "healthy", "service": "DiagnoCare ML API"}), 200
+
+@app.route('/features-metadata', methods=['GET'])
+def features_metadata():
+    """
+    Get symptoms and feature metadata
+    ---
+    tags:
+      - Metadata
+    responses:
+      200:
+        description: Symptoms and feature definitions in EN/FR
+    """
+    symptoms = sorted([str(s) for s in mlb.classes_])
+  
+    symptoms_en = [
+        {"id": s, "label": translate_symptom(s, translations, target_lang="en")}
+        for s in symptoms
+    ]
+    symptoms_fr = [
+        {"id": s, "label": translate_symptom(s, translations, target_lang="fr")}
+        for s in symptoms
+    ]
+
+    numeric_features = [
+        {"key": "age", "name_en": "Age", "name_fr": "Âge", "unit_en": "years", "unit_fr": "ans", "range": "10-80"},
+        {"key": "weight", "name_en": "Weight", "name_fr": "Poids", "unit_en": "kg", "unit_fr": "kg", "range": "40-150"},
+        {"key": "height", "name_en": "Height", "name_fr": "Taille", "unit_en": "cm", "unit_fr": "cm", "range": "120-220"},
+        {"key": "tension_moyenne", "name_en": "Mean blood pressure", "name_fr": "Tension moyenne", "unit_en": "mmHg", "unit_fr": "mmHg", "range": "80-180"},
+        {"key": "cholesterole_moyen", "name_en": "Mean cholesterol", "name_fr": "Cholestérol moyen", "unit_en": "mg/dL", "unit_fr": "mg/dL", "range": "100-300"}
+    ]
+
+    categorical_features = [
+        {"key": "gender", "name_en": "Gender", "name_fr": "Genre",
+         "values_en": ["Male", "Female"], "values_fr": ["Homme", "Femme"]},
+        {"key": "blood_pressure", "name_en": "Blood Pressure", "name_fr": "Pression artérielle",
+         "values_en": ["Low", "Normal", "High"], "values_fr": ["Faible", "Normale", "Élevée"]},
+        {"key": "cholesterol_level", "name_en": "Cholesterol Level", "name_fr": "Niveau de cholestérol",
+         "values_en": ["Low", "Normal", "High"], "values_fr": ["Faible", "Normal", "Élevé"]},
+        {"key": "outcome_variable", "name_en": "Outcome Variable", "name_fr": "Variable de résultat",
+         "values_en": ["Negative", "Positive"], "values_fr": ["Négatif", "Positif"]},
+        {"key": "smoking", "name_en": "Smoking", "name_fr": "Tabagisme",
+         "values_en": ["No", "Yes"], "values_fr": ["Non", "Oui"]},
+        {"key": "alcohol", "name_en": "Alcohol", "name_fr": "Alcool",
+         "values_en": ["None", "Moderate", "Heavy"], "values_fr": ["Aucun", "Modéré", "Élevé"]},
+        {"key": "sedentarite", "name_en": "Sedentariness", "name_fr": "Sédentarité",
+         "values_en": ["Low", "Moderate", "High"], "values_fr": ["Faible", "Modérée", "Élevée"]},
+        {"key": "family_history", "name_en": "Family History", "name_fr": "Antécédents familiaux",
+         "values_en": ["No", "Yes"], "values_fr": ["Non", "Oui"]}
+    ]
+
+    return jsonify({
+        "symptoms": {
+            "count": len(symptoms),
+            "en": symptoms_en,
+            "fr": symptoms_fr
+        },
+        "features": {
+            "numeric": numeric_features,
+            "categorical": categorical_features
+        },
+        "languages": ["en", "fr"]
+    }), 200
 
 @app.route('/extract-symptoms', methods=['POST'])
 def extract_symptoms():
@@ -84,6 +177,59 @@ def extract_symptoms():
 
 @app.route('/predict', methods=['POST'])
 def predict():
+    """
+    Predict diseases and specialists
+    ---
+    tags:
+      - Prediction
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            type: object
+            required:
+              - symptoms
+            properties:
+              symptoms:
+                type: array
+                items:
+                  type: string
+              language:
+                type: string
+                enum: [fr, en]
+              age:
+                type: integer
+              weight:
+                type: number
+              height:
+                type: number
+              tension_moyenne:
+                type: number
+              cholesterole_moyen:
+                type: number
+              gender:
+                type: string
+              blood_pressure:
+                type: string
+              cholesterol_level:
+                type: string
+              outcome_variable:
+                type: string
+              smoking:
+                type: string
+              alcohol:
+                type: string
+              sedentarite:
+                type: string
+              family_history:
+                type: string
+    responses:
+      200:
+        description: Predictions returned
+      400:
+        description: Invalid input
+    """
     try:
         data = request.json
         
@@ -92,17 +238,17 @@ def predict():
         if language not in ['fr', 'en']:
             language = 'fr'  # Default to French if invalid
         
-        # 1. Parse Symptoms
+        # 1. Parse Symptoms (English only)
         symptoms = data.get('symptoms', [])
-        
-        # If raw_description is provided, extract symptoms automatically
-        raw_description = data.get('raw_description')
-        if raw_description and (not symptoms or len(symptoms) == 0):
-            available_symptoms = list(mlb.classes_)
-            extracted = extract_symptoms_from_text(raw_description, available_symptoms, language=language)
-            symptoms = extracted
+        if isinstance(symptoms, str):
+            return jsonify({"error": "symptoms must be an array of strings"}), 400
+        if not symptoms:
+            return jsonify({"error": "symptoms is required and must be in English"}), 400
         
         cleaned_symptoms = [clean_text(s) for s in symptoms]
+        cleaned_symptoms = [s for s in cleaned_symptoms if s in mlb.classes_]
+        if not cleaned_symptoms:
+            return jsonify({"error": "No valid symptoms provided"}), 400
         
         # Create symptom features
         symptoms_encoded = mlb.transform([cleaned_symptoms])
@@ -143,7 +289,7 @@ def predict():
             'Gender': data.get('gender', 'Male'),
             'Blood Pressure': data.get('blood_pressure', 'Normal'),
             'Cholesterol Level': data.get('cholesterol_level', 'Normal'),
-            'Outcome Variable': data.get('outcome_variable', 'Negative'),
+            'Outcome Variable': data.get('outcome_variable', 'Negative') or 'Negative',
             'Smoking': data.get('smoking', 'No'),
             'Alcohol': data.get('alcohol', 'None'),
             'Sedentarite': data.get('sedentarite', 'Moderate'),
@@ -155,6 +301,7 @@ def predict():
         one_hot_features = {}
         for col in feature_columns:
             for cat_col in categorical_cols:
+                print(cat_col)
                 if col.startswith(f"{cat_col}_"):
                     one_hot_features[col] = False
         
@@ -202,6 +349,7 @@ def predict():
                 float(probability * 100), 
                 specialist_name_translated, 
                 cleaned_symptoms,
+                translations,
                 language=language
             )
             

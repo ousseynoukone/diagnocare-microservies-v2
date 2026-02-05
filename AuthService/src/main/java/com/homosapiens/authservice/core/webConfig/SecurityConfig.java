@@ -31,6 +31,7 @@ public class SecurityConfig {
                     .authorizeHttpRequests((requests)->requests
                             .requestMatchers("/swagger-ui/**", "/swagger-ui.html", "/v3/api-docs/**", "/swagger-resources/**", "/webjars/**").permitAll()
                             .requestMatchers(HttpMethod.POST,"/login", "/validateToken", "/register","/refresh-token","/send").permitAll()
+                            .requestMatchers(HttpMethod.GET, "/roles/**").permitAll()
                             .anyRequest().authenticated());
 
             return  http.build();

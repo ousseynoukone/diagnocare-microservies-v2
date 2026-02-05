@@ -33,10 +33,10 @@ def load_translations(translations_file: str = "data/translations.json") -> Dict
             return json.load(f)
     except FileNotFoundError:
         print(f"Warning: Translation file {translations_file} not found. Using empty translations.")
-        return {"diseases": {}, "specialists": {}}
+        return {"diseases": {}, "specialists": {}, "symptoms": {}}
     except json.JSONDecodeError as e:
         print(f"Error loading translations: {e}")
-        return {"diseases": {}, "specialists": {}}
+        return {"diseases": {}, "specialists": {}, "symptoms": {}}
 
 
 def normalize_symptom_name(symptom_name: str) -> str:
@@ -276,8 +276,33 @@ def translate_specialist(specialist_name_en: str, translations_dict: Dict,
     return translated
 
 
+def format_symptom_for_display(symptom_name: str) -> str:
+    if not symptom_name:
+        return ""
+    return symptom_name.replace("_", " ").strip()
+
+
+def translate_symptom(symptom_name_en: str, translations_dict: Dict,
+                      target_lang: str = 'fr') -> str:
+    normalized = normalize_symptom_name(symptom_name_en)
+    if target_lang == 'en':
+        return format_symptom_for_display(normalized)
+
+    symptoms_map = translations_dict.get('symptoms', {})
+    translated = symptoms_map.get(normalized)
+    if translated:
+        return translated
+    return format_symptom_for_display(normalized)
+
+
+def translate_symptoms(symptoms_en: List[str], translations_dict: Dict,
+                       target_lang: str = 'fr') -> List[str]:
+    return [translate_symptom(s, translations_dict, target_lang=target_lang) for s in symptoms_en if s]
+
+
 def generate_prediction_explanation(disease_name: str, probability: float, 
                                    specialist_name: str, symptoms: List[str],
+                                   translations_dict: Dict,
                                    language: str = 'fr') -> str:
     """
     Generate explanation/description for a prediction in the requested language
@@ -292,12 +317,14 @@ def generate_prediction_explanation(disease_name: str, probability: float,
     Returns:
         Explanation text in the requested language
     """
+    translated_symptoms = translate_symptoms(symptoms, translations_dict, target_lang=language)
+
     if language == 'fr':
         # Format symptoms list
-        if symptoms:
-            symptoms_text = ", ".join(symptoms[:5])  # Limit to first 5 symptoms
-            if len(symptoms) > 5:
-                symptoms_text += f" et {len(symptoms) - 5} autre(s)"
+        if translated_symptoms:
+            symptoms_text = ", ".join(translated_symptoms[:5])  # Limit to first 5 symptoms
+            if len(translated_symptoms) > 5:
+                symptoms_text += f" et {len(translated_symptoms) - 5} autre(s)"
         else:
             symptoms_text = "les symptômes déclarés"
         
@@ -309,10 +336,10 @@ def generate_prediction_explanation(disease_name: str, probability: float,
         )
     else:  # English
         # Format symptoms list
-        if symptoms:
-            symptoms_text = ", ".join(symptoms[:5])  # Limit to first 5 symptoms
-            if len(symptoms) > 5:
-                symptoms_text += f" and {len(symptoms) - 5} other(s)"
+        if translated_symptoms:
+            symptoms_text = ", ".join(translated_symptoms[:5])  # Limit to first 5 symptoms
+            if len(translated_symptoms) > 5:
+                symptoms_text += f" and {len(translated_symptoms) - 5} other(s)"
         else:
             symptoms_text = "the declared symptoms"
         

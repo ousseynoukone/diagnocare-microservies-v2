@@ -51,12 +51,16 @@ public class PredictionController {
                     sessionSymptomRequestDTO.getLanguage()
             );
             
-            // Extract symptoms from raw description using Flask NLP
-            List<String> extractedSymptoms = mlPredictionClient.extractSymptoms(
-                    sessionSymptom.getRawDescription(), 
-                    language
-            );
-            log.info("Extracted {} symptoms from description using language: {}", extractedSymptoms.size(), language);
+            // Use explicit symptoms (English) for prediction
+            List<String> extractedSymptoms = sessionSymptom.getSymptoms() != null
+                    ? sessionSymptom.getSymptoms().stream()
+                        .map(Symptom::getLabel)
+                        .toList()
+                    : List.of();
+            if (extractedSymptoms.isEmpty()) {
+                return ResponseEntity.badRequest().build();
+            }
+            log.info("Using {} symptoms for prediction (language: {})", extractedSymptoms.size(), language);
             
             // Get patient medical profile
             Optional<PatientMedicalProfile> profileOpt = patientMedicalProfileService.getProfileByUserId(sessionSymptomRequestDTO.getUserId());
