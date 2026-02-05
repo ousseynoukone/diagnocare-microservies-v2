@@ -1,18 +1,36 @@
 services:
-  postgres:
+  auth-postgres:
     image: postgres:15
-    container_name: diagnocare-db
+    container_name: auth-db
     environment:
-      POSTGRES_DB: ${DB_NAME}
+      POSTGRES_DB: ${AUTH_DB_NAME:-auth_db}
       POSTGRES_USER: ${DB_USERNAME}
       POSTGRES_PASSWORD: ${DB_PASSWORD}
     # TO COMMENT ON DEPLOYMENT
     ports:
       - "5432:5432"
     volumes:
-      - postgres_data:/var/lib/postgresql/data
+      - auth_postgres_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${DB_USERNAME} -d ${DB_NAME}"]
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USERNAME} -d ${AUTH_DB_NAME:-auth_db}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  diagnocare-postgres:
+    image: postgres:15
+    container_name: diagnocare-db
+    environment:
+      POSTGRES_DB: ${DIAGNOCARE_DB_NAME:-diagnocare_db}
+      POSTGRES_USER: ${DB_USERNAME}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+    # TO COMMENT ON DEPLOYMENT
+    ports:
+      - "5433:5432"
+    volumes:
+      - diagnocare_postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USERNAME} -d ${DIAGNOCARE_DB_NAME:-diagnocare_db}"]
       interval: 5s
       timeout: 5s
       retries: 5
@@ -29,7 +47,8 @@ services:
     volumes:
       - pgadmin_data:/var/lib/pgadmin
     depends_on:
-      - postgres
+      - auth-postgres
+      - diagnocare-postgres
 
   registry-service:
     build: ./RegistryService/.
@@ -47,13 +66,33 @@ services:
     env_file:
       - .env
     environment:
-      - SPRING_DATASOURCE_URL=jdbc:postgresql://postgres:5432/${DB_NAME}
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://auth-postgres:5432/${AUTH_DB_NAME:-auth_db}
+      - SPRING_KAFKA_BOOTSTRAP_SERVERS=kafka:9092
       - eureka.client.serviceUrl.defaultZone=http://registry-service:8761/eureka/
     depends_on:
-      postgres:
+      auth-postgres:
         condition: service_healthy
       registry-service:
         condition: service_started
+
+  diagnocare-service:
+    build: ./DiagnoCareService/.
+    restart: always
+    # ports:
+    #   - '8080:8080'
+    env_file:
+      - .env
+    environment:
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://diagnocare-postgres:5432/${DIAGNOCARE_DB_NAME:-diagnocare_db}
+      - SPRING_KAFKA_BOOTSTRAP_SERVERS=kafka:9092
+      - eureka.client.serviceUrl.defaultZone=http://registry-service:8761/eureka/
+    depends_on:
+      diagnocare-postgres:
+        condition: service_healthy
+      registry-service:
+        condition: service_started
+      kafka:
+        condition: service_healthy
 
   gateway-service:
     build: ./GatewayService/.
@@ -66,6 +105,7 @@ services:
       - eureka.client.serviceUrl.defaultZone=http://registry-service:8761/eureka/
     depends_on:
       - auth-service
+      - diagnocare-service
 
   # Kafka setup using KRaft mode 
   kafka:
@@ -160,6 +200,7 @@ services:
       - kafka
 
 volumes:
-  postgres_data:
+  auth_postgres_data:
+  diagnocare_postgres_data:
   pgadmin_data:
   kafka_data:

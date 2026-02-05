@@ -39,6 +39,9 @@ public class User {
     @Pattern(regexp = "\\+?[0-9]{7,15}", message = "Phone number must be valid")
     private String phoneNumber;
 
+    @Column(length = 5)
+    private String lang = "fr";
+
     @NotNull(message = "Password must not be null")
     @Size(min = 8, message = "Password must be at least 8 characters long")
     @JsonProperty(access = JsonProperty.Access.WRITE_ONLY)
@@ -57,4 +60,17 @@ public class User {
             joinColumns = @JoinColumn(name = "userId", referencedColumnName = "id"),
             inverseJoinColumns = @JoinColumn(name = "role_id", referencedColumnName = "id"))
     private List<Role> roles = new ArrayList<>();
+
+    @PrePersist
+    @PreUpdate
+    private void normalizeLang() {
+        if (lang == null || lang.trim().isEmpty()) {
+            lang = "fr";
+            return;
+        }
+        lang = lang.trim().toLowerCase();
+        if (!lang.equals("fr") && !lang.equals("en")) {
+            lang = "fr";
+        }
+    }
 }

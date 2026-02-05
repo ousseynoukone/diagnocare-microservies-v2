@@ -32,6 +32,7 @@ public class PredictionController {
     private final PathologyService pathologyService;
     private final DoctorService doctorService;
     private final PathologyResultService pathologyResultService;
+    private final UserService userService;
 
     @PostMapping
     @Operation(summary = "Create a new prediction", description = "Creates a new AI prediction based on symptom session")
@@ -44,14 +45,11 @@ public class PredictionController {
             // Create or get the session symptom
             SessionSymptom sessionSymptom = sessionSymptomService.createSessionSymptom(sessionSymptomRequestDTO);
             
-            // Get language parameter (default: "fr")
-            String language = sessionSymptomRequestDTO.getLanguage();
-            if (language == null || language.isEmpty()) {
-                language = "fr"; // Default to French
-            }
-            if (!language.equals("fr") && !language.equals("en")) {
-                language = "fr"; // Default to French if invalid
-            }
+            // Resolve language from user profile (default: "fr")
+            String language = resolveUserLanguage(
+                    sessionSymptomRequestDTO.getUserId(),
+                    sessionSymptomRequestDTO.getLanguage()
+            );
             
             // Extract symptoms from raw description using Flask NLP
             List<String> extractedSymptoms = mlPredictionClient.extractSymptoms(
@@ -158,6 +156,27 @@ public class PredictionController {
         builder.outcome_variable("Negative");
         
         return builder.build();
+    }
+
+    private String resolveUserLanguage(Long userId, String fallbackLanguage) {
+        String language = null;
+        if (userId != null) {
+            language = userService.getUserById(userId)
+                    .map(User::getLang)
+                    .orElse(null);
+        }
+        if (language == null || language.trim().isEmpty()) {
+            language = fallbackLanguage;
+        }
+        return normalizeLanguage(language);
+    }
+
+    private String normalizeLanguage(String language) {
+        if (language == null || language.trim().isEmpty()) {
+            return "fr";
+        }
+        String normalized = language.trim().toLowerCase();
+        return normalized.equals("fr") || normalized.equals("en") ? normalized : "fr";
     }
     
     private boolean determineRedAlert(MLPredictionResponseDTO mlResponse) {

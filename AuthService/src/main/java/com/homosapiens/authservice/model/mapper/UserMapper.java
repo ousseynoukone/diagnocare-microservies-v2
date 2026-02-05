@@ -17,6 +17,7 @@ public class UserMapper {
         user.setLastName(dto.getLastName());
         user.setPhoneNumber(dto.getPhoneNumber());
         user.setPassword(dto.getPassword());
+        user.setLang(dto.getLang());
 
         if (role != null) {
             user.setRoles(Collections.singletonList(role));

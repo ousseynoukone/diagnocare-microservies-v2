@@ -36,7 +36,23 @@ public class User extends BaseEntity{
     @Column(length = 13)
     private String phoneNumber;
 
+    @Column(length = 5)
+    private String lang = "fr";
+
     private Boolean isActive;
+
+    @PrePersist
+    @PreUpdate
+    private void normalizeLang() {
+        if (lang == null || lang.trim().isEmpty()) {
+            lang = "fr";
+            return;
+        }
+        lang = lang.trim().toLowerCase();
+        if (!lang.equals("fr") && !lang.equals("en")) {
+            lang = "fr";
+        }
+    }
 
     @ManyToMany(fetch = FetchType.EAGER)
     @JoinTable(name = "user_roles",

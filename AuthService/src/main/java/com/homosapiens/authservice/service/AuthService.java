@@ -1,12 +1,16 @@
 package com.homosapiens.authservice.service;
 
 import com.homosapiens.authservice.core.exception.AppException;
+import com.homosapiens.authservice.core.kafka.KafkaProducer;
+import com.homosapiens.authservice.core.kafka.eventEnums.KafkaEvent;
 import com.homosapiens.authservice.core.webConfig.JWTAuthProvider;
 import com.homosapiens.authservice.model.Role;
 import com.homosapiens.authservice.model.User;
 import com.homosapiens.authservice.model.dtos.CustomUserDetails;
 import com.homosapiens.authservice.model.dtos.UserLoginDto;
 import com.homosapiens.authservice.model.dtos.UserRegisterDto;
+import com.homosapiens.authservice.model.dtos.UserSyncEventDTO;
+import com.homosapiens.authservice.model.dtos.UserUpdateDto;
 import com.homosapiens.authservice.model.mapper.UserMapper;
 import com.homosapiens.authservice.repository.RoleRepository;
 import com.homosapiens.authservice.repository.UserRepository;
@@ -39,6 +43,9 @@ public class AuthService {
     @Autowired
     private JWTAuthProvider jwtAuthProvider;
 
+    @Autowired
+    private KafkaProducer kafkaProducer;
+
     public Object login(UserLoginDto loginDto) {
         User u = userRepository.findUserByEmail(loginDto.getEmail());
         if (u == null) {
@@ -64,7 +71,49 @@ public class AuthService {
                 .orElseThrow(() -> new AppException(HttpStatus.NOT_FOUND, "Role not found"));
 
         User realUser = UserMapper.toEntity(user, role);
-        return userRepository.save(realUser);
+        User saved = userRepository.save(realUser);
+        sendUserEvent(KafkaEvent.USER_REGISTERED, saved, true);
+        return saved;
+    }
+
+    public User updateUser(Long id, UserUpdateDto updateDto) {
+        User user = userRepository.findById(id)
+                .orElseThrow(() -> new AppException(HttpStatus.NOT_FOUND, "User not found"));
+
+        if (updateDto.getEmail() != null && !updateDto.getEmail().equals(user.getEmail())) {
+            User existingUser = userRepository.findUserByEmail(updateDto.getEmail());
+            if (existingUser != null) {
+                throw new AppException(HttpStatus.CONFLICT, "Email already in use");
+            }
+            user.setEmail(updateDto.getEmail());
+        }
+
+        if (updateDto.getFirstName() != null) {
+            user.setFirstName(updateDto.getFirstName());
+        }
+        if (updateDto.getLastName() != null) {
+            user.setLastName(updateDto.getLastName());
+        }
+        if (updateDto.getPhoneNumber() != null) {
+            user.setPhoneNumber(updateDto.getPhoneNumber());
+        }
+        if (updateDto.getLang() != null) {
+            user.setLang(updateDto.getLang());
+        }
+        if (updateDto.getPassword() != null && !updateDto.getPassword().isEmpty()) {
+            user.setPassword(passwordEncoder.encode(updateDto.getPassword()));
+        }
+
+        User saved = userRepository.save(user);
+        sendUserEvent(KafkaEvent.USER_UPDATE, saved, true);
+        return saved;
+    }
+
+    public void deleteUser(Long id) {
+        User user = userRepository.findById(id)
+                .orElseThrow(() -> new AppException(HttpStatus.NOT_FOUND, "User not found"));
+        userRepository.delete(user);
+        sendUserEvent(KafkaEvent.USER_DELETED, user, false);
     }
 
     public Object validateToken(String token) {
@@ -110,5 +159,18 @@ public class AuthService {
         response.put("user", user);
 
         return response;
+    }
+
+    private void sendUserEvent(KafkaEvent event, User user, boolean active) {
+        UserSyncEventDTO payload = UserSyncEventDTO.builder()
+                .id(user.getId())
+                .email(user.getEmail())
+                .firstName(user.getFirstName())
+                .lastName(user.getLastName())
+                .phoneNumber(user.getPhoneNumber())
+                .lang(user.getLang())
+                .active(active)
+                .build();
+        kafkaProducer.sendMessage(event.toString(), String.valueOf(user.getId()), payload);
     }
 }
