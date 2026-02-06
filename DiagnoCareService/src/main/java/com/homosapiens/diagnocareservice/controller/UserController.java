@@ -1,10 +1,8 @@
 package com.homosapiens.diagnocareservice.controller;
 
 import com.homosapiens.diagnocareservice.model.entity.User;
-import com.homosapiens.diagnocareservice.model.entity.enums.RoleEnum;
 import com.homosapiens.diagnocareservice.service.UserService;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -19,14 +17,6 @@ public class UserController {
     @Autowired
     public UserController(UserService userService) {
         this.userService = userService;
-    }
-
-    @PostMapping
-    public ResponseEntity<User> createUser(@RequestBody User user) {
-        if (userService.existsByEmail(user.getEmail())) {
-            return ResponseEntity.badRequest().build();
-        }
-        return ResponseEntity.status(HttpStatus.CREATED).body(userService.createUser(user));
     }
 
     @PutMapping("/{id}")
@@ -51,29 +41,9 @@ public class UserController {
                 .orElse(ResponseEntity.notFound().build());
     }
 
-    @GetMapping("/email/{email}")
-    public ResponseEntity<User> getUserByEmail(@PathVariable String email) {
-        return userService.getUserByEmail(email)
-                .map(ResponseEntity::ok)
-                .orElse(ResponseEntity.notFound().build());
-    }
-
     @GetMapping
     public ResponseEntity<List<User>> getAllUsers() {
         return ResponseEntity.ok(userService.getAllUsers());
     }
-
-    @GetMapping("/role/{role}")
-    public ResponseEntity<List<User>> getAllUsersByRole(@PathVariable RoleEnum role) {
-        return ResponseEntity.ok(userService.getUsersByRole(role));
-    }
-
-    @GetMapping("/phone/{phoneNumber}")
-    public ResponseEntity<User> getUserByPhoneNumber(@PathVariable String phoneNumber) {
-        return userService.getUserByPhoneNumber(phoneNumber)
-                .map(ResponseEntity::ok)
-                .orElse(ResponseEntity.notFound().build());
-    }
-
 
 } 
