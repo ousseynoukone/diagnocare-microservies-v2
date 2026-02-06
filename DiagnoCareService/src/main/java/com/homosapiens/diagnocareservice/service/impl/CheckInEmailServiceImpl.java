@@ -105,6 +105,10 @@ public class CheckInEmailServiceImpl implements CheckInEmailService {
         String benefit1 = isFrench ? "Ajuster vos recommandations avec des données récentes" : "Update recommendations using your latest data";
         String benefit2 = isFrench ? "Détecter rapidement une évolution de votre état" : "Detect changes in your health early";
         String benefit3 = isFrench ? "Améliorer le suivi personnalisé de votre santé" : "Improve your personalized follow-up";
+        String redAlertTitle = isFrench ? "Alerte rouge" : "Red alert";
+        String redAlertMessage = isFrench
+                ? "Votre évaluation indique une alerte rouge. Veuillez contacter un professionnel de santé rapidement et ne perdez pas de temps."
+                : "Your assessment shows a red alert. Please contact a healthcare professional promptly and do not delay.";
 
         String topDisease = resolveLocalizedDisease(topResult, isFrench);
         String specialist = resolveLocalizedSpecialist(topResult, isFrench);
@@ -114,6 +118,15 @@ public class CheckInEmailServiceImpl implements CheckInEmailService {
         String redAlert = prediction != null && Boolean.TRUE.equals(prediction.getIsRedAlert())
                 ? (isFrench ? "Oui" : "Yes")
                 : (isFrench ? "Non" : "No");
+
+        String redAlertHtml = prediction != null && Boolean.TRUE.equals(prediction.getIsRedAlert())
+                ? """
+                  <div style="margin:16px 0 12px;padding:12px 14px;border-radius:8px;background:#ffe7e6;color:#8a1f17;">
+                    <div style="font-weight:700;margin-bottom:4px;">%s</div>
+                    <div style="font-size:14px;line-height:1.5;">%s</div>
+                  </div>
+                  """.formatted(escapeHtml(redAlertTitle), escapeHtml(redAlertMessage))
+                : "";
 
         return """
                 <!doctype html>
@@ -153,6 +166,7 @@ public class CheckInEmailServiceImpl implements CheckInEmailService {
                                     <td style="padding:8px 0;text-align:right;">%s</td>
                                   </tr>
                                 </table>
+                                %s
                                 <div style="margin:24px 0 8px;font-size:14px;line-height:1.5;color:#3d4b66;">%s</div>
                                 <div style="margin:8px 0 12px;font-size:14px;color:#3d4b66;">
                                   <div style="font-weight:600;margin-bottom:6px;">%s</div>
@@ -184,6 +198,7 @@ public class CheckInEmailServiceImpl implements CheckInEmailService {
                 escapeHtml(topDisease),
                 escapeHtml(specialistLabel),
                 escapeHtml(specialist),
+                redAlertHtml,
                 escapeHtml(action),
                 escapeHtml(benefitsTitle),
                 escapeHtml(benefit1),
