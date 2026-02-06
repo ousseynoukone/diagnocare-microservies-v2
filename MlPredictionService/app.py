@@ -173,7 +173,7 @@ def features_metadata():
     numeric_features = [
         {"key": "age", "name_en": "Age", "name_fr": "Âge", "unit_en": "years", "unit_fr": "ans", "range": "10-80"},
         {"key": "weight", "name_en": "Weight", "name_fr": "Poids", "unit_en": "kg", "unit_fr": "kg", "range": "40-150"},
-        {"key": "height", "name_en": "Height", "name_fr": "Taille", "unit_en": "cm", "unit_fr": "cm", "range": "120-220"},
+        {"key": "bmi", "name_en": "BMI", "name_fr": "IMC", "unit_en": "kg/m²", "unit_fr": "kg/m²", "range": "12-50"},
         {"key": "tension_moyenne", "name_en": "Mean blood pressure", "name_fr": "Tension moyenne", "unit_en": "mmHg", "unit_fr": "mmHg", "range": "80-180"},
         {"key": "cholesterole_moyen", "name_en": "Mean cholesterol", "name_fr": "Cholestérol moyen", "unit_en": "mg/dL", "unit_fr": "mg/dL", "range": "100-300"}
     ]
@@ -269,7 +269,7 @@ def predict():
                 type: integer
               weight:
                 type: number
-              height:
+              bmi:
                 type: number
               tension_moyenne:
                 type: number
@@ -325,8 +325,12 @@ def predict():
         # Defaults based on "General" profile from training script
         age = data.get('age', 35)
         weight = data.get('weight', 75)
-        height = data.get('height', 170) # cm
-        bmi = weight / ((height/100)**2)
+        bmi = data.get('bmi')
+        if bmi is None:
+            bmi = data.get('IMC')
+        if bmi is None:
+            height = data.get('height', 170) # cm (legacy input)
+            bmi = weight / ((height/100)**2)
         
         # Approximate vitals if not provided
         tension_moyenne = data.get('tension_moyenne', 120)

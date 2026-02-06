@@ -15,7 +15,7 @@ public class MLPredictionRequestDTO {
     private List<String> symptoms;
     private Integer age;
     private Float weight;
-    private Float height;
+    private Float bmi;
     private Float tension_moyenne;
     private Float cholesterole_moyen;
     private String gender;

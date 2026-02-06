@@ -108,7 +108,7 @@ public class PredictionController {
             PatientMedicalProfile profile = profileOpt.get();
             builder.age(profile.getAge())
                    .weight(profile.getWeight())
-                   .height(170f) // default height (can be calculated from BMI if needed)
+                   .bmi(profile.getBmi())
                    .tension_moyenne(profile.getMeanBloodPressure())
                    .cholesterole_moyen(profile.getMeanCholesterol())
                    .gender(profile.getGender() != null ? profile.getGender().name() : "Male")
@@ -145,7 +145,7 @@ public class PredictionController {
             // Default values if no profile
             builder.age(35)
                    .weight(75f)
-                   .height(170f)
+                   .bmi(24.2f)
                    .tension_moyenne(120f)
                    .cholesterole_moyen(190f)
                    .gender("Male")
