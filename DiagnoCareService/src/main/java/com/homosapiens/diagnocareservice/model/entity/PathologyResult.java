@@ -18,6 +18,12 @@ public class PathologyResult extends BaseEntity {
     @Column(columnDefinition = "TEXT")
     private String description;
 
+    @Column(name = "localized_disease_name", length = 255)
+    private String localizedDiseaseName;
+
+    @Column(name = "localized_specialist_label", length = 255)
+    private String localizedSpecialistLabel;
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "pathologie_id", nullable = false)
     private Pathology pathology;

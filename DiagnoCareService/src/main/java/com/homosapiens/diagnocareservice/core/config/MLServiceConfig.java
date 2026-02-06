@@ -13,8 +13,13 @@ public class MLServiceConfig {
     private String mlServiceUrl;
 
     @Bean
+    public RestTemplate directRestTemplate() {
+        return new RestTemplate();
+    }
+
+    @Bean
     @LoadBalanced
-    public RestTemplate restTemplate() {
+    public RestTemplate loadBalancedRestTemplate() {
         return new RestTemplate();
     }
 

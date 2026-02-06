@@ -16,4 +16,6 @@ public class PathologyResultRequestDTO {
     private BigDecimal diseaseScore;
     private String description;
     private String predictionId; // Optional, can be set when creating from prediction service
+    private String localizedDiseaseName;
+    private String localizedSpecialistLabel;
 }

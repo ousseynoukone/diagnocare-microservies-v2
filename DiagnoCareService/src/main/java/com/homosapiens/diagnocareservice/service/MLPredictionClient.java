@@ -14,6 +14,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestClientException;
 import org.springframework.web.client.RestTemplate;
 
+import java.net.URI;
 import java.util.List;
 
 @Service
@@ -21,14 +22,16 @@ import java.util.List;
 @Slf4j
 public class MLPredictionClient {
 
-    private final RestTemplate restTemplate;
+    private final RestTemplate directRestTemplate;
+    private final RestTemplate loadBalancedRestTemplate;
     private final MLServiceConfig mlServiceConfig;
 
     public MLPredictionResponseDTO predict(MLPredictionRequestDTO request) {
         try {
             String url = mlServiceConfig.getMlServiceUrl() + "/predict";
             log.info("Calling ML service at: {}", url);
-            
+
+            RestTemplate restTemplate = selectRestTemplate(url);
             ResponseEntity<MLPredictionResponseDTO> response = restTemplate.postForEntity(
                     url,
                     request,
@@ -51,4 +54,29 @@ public class MLPredictionClient {
         }
     }
 
+    private RestTemplate selectRestTemplate(String url) {
+        try {
+            URI uri = URI.create(url);
+            String host = uri.getHost();
+            int port = uri.getPort();
+
+            if (port != -1) {
+                return directRestTemplate;
+            }
+            if (host == null) {
+                return loadBalancedRestTemplate;
+            }
+            String lowerHost = host.toLowerCase();
+            if ("localhost".equals(lowerHost) || "127.0.0.1".equals(lowerHost)) {
+                return directRestTemplate;
+            }
+            if (host.contains(".")) {
+                return directRestTemplate;
+            }
+        } catch (IllegalArgumentException ignored) {
+            return loadBalancedRestTemplate;
+        }
+
+        return loadBalancedRestTemplate;
+    }
 }

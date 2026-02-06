@@ -18,6 +18,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.beans.factory.annotation.Value;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -38,6 +39,12 @@ public class CheckInServiceImpl implements CheckInService {
     private final PathologyResultRepository pathologyResultRepository;
     private final com.homosapiens.diagnocareservice.repository.PredictionRepository predictionRepository;
 
+    @Value("${app.checkin.first-reminder-minutes:1440}")
+    private long firstReminderMinutes;
+
+    @Value("${app.checkin.second-reminder-minutes:2880}")
+    private long secondReminderMinutes;
+
     @Override
     @Transactional
     public CheckIn scheduleCheckIn(Prediction prediction) {
@@ -50,8 +57,8 @@ public class CheckInServiceImpl implements CheckInService {
         LocalDateTime baseTime = prediction.getCreatedDate() != null
                 ? prediction.getCreatedDate()
                 : LocalDateTime.now();
-        checkIn.setFirstReminderAt(baseTime.plusHours(24));
-        checkIn.setSecondReminderAt(baseTime.plusHours(48));
+        checkIn.setFirstReminderAt(baseTime.plusMinutes(firstReminderMinutes));
+        checkIn.setSecondReminderAt(baseTime.plusMinutes(secondReminderMinutes));
         checkIn.setStatus(CheckInStatus.PENDING);
         return checkInRepository.save(checkIn);
     }
@@ -69,6 +76,12 @@ public class CheckInServiceImpl implements CheckInService {
             throw new AppException(HttpStatus.BAD_REQUEST, "Prediction does not belong to user");
         }
 
+        CheckIn existingCheckIn = checkInRepository.findByPreviousPredictionIdAndUserId(previousPrediction.getId(), user.getId())
+                .orElse(null);
+        if (existingCheckIn != null && CheckInStatus.COMPLETED.equals(existingCheckIn.getStatus())) {
+            throw new AppException(HttpStatus.BAD_REQUEST, "Check-in already completed for this prediction");
+        }
+
         SessionSymptomRequestDTO symptomRequestDTO = new SessionSymptomRequestDTO();
         symptomRequestDTO.setUserId(requestDTO.getUserId());
         symptomRequestDTO.setSymptomIds(requestDTO.getSymptomIds());
@@ -77,14 +90,9 @@ public class CheckInServiceImpl implements CheckInService {
         PredictionCreationResult result = predictionWorkflowService.createPrediction(symptomRequestDTO, previousPrediction.getId());
         Prediction newPrediction = result.getPrediction();
 
-        CheckIn checkIn = checkInRepository.findByPreviousPredictionIdAndUserId(previousPrediction.getId(), user.getId())
-                .orElseGet(() -> {
-                    CheckIn created = new CheckIn();
-                    created.setUser(user);
-                    created.setPreviousPrediction(previousPrediction);
-                    created.setStatus(CheckInStatus.PENDING);
-                    return created;
-                });
+        CheckIn checkIn = existingCheckIn != null
+                ? existingCheckIn
+                : createNewCheckIn(user, previousPrediction);
 
         CheckInOutcome outcome = determineOutcome(previousPrediction, newPrediction);
         String worseReason = determineWorseReason(previousPrediction, newPrediction);
@@ -97,6 +105,14 @@ public class CheckInServiceImpl implements CheckInService {
         CheckIn saved = checkInRepository.save(checkIn);
 
         return toDto(saved, previousPrediction, newPrediction);
+    }
+
+    private CheckIn createNewCheckIn(User user, Prediction previousPrediction) {
+        CheckIn created = new CheckIn();
+        created.setUser(user);
+        created.setPreviousPrediction(previousPrediction);
+        created.setStatus(CheckInStatus.PENDING);
+        return created;
     }
 
     @Override

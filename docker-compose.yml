@@ -88,7 +88,7 @@ services:
       - KAFKA_BOOTSTRAP_SERVERS=kafka:9092
       - SPRING_KAFKA_BOOTSTRAP_SERVERS=kafka:9092
       - eureka.client.serviceUrl.defaultZone=http://registry-service:8761/eureka/
-      - ml.service.url=http://ML-PREDICTION-SERVICE
+      - ML_SERVICE_URL=http://ml-prediction-service:5000
     depends_on:
       diagnocare-postgres:
         condition: service_healthy

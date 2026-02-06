@@ -78,6 +78,8 @@ public class PathologyResultServiceImpl implements PathologyResultService {
         pathologyResult.setPrediction(prediction);
         pathologyResult.setDiseaseScore(requestDTO.getDiseaseScore());
         pathologyResult.setDescription(requestDTO.getDescription());
+        pathologyResult.setLocalizedDiseaseName(requestDTO.getLocalizedDiseaseName());
+        pathologyResult.setLocalizedSpecialistLabel(requestDTO.getLocalizedSpecialistLabel());
 
         return pathologyResultRepository.save(pathologyResult);
     }
@@ -107,6 +109,12 @@ public class PathologyResultServiceImpl implements PathologyResultService {
         }
         if (requestDTO.getDescription() != null) {
             pathologyResult.setDescription(requestDTO.getDescription());
+        }
+        if (requestDTO.getLocalizedDiseaseName() != null) {
+            pathologyResult.setLocalizedDiseaseName(requestDTO.getLocalizedDiseaseName());
+        }
+        if (requestDTO.getLocalizedSpecialistLabel() != null) {
+            pathologyResult.setLocalizedSpecialistLabel(requestDTO.getLocalizedSpecialistLabel());
         }
 
         return pathologyResultRepository.save(pathologyResult);
