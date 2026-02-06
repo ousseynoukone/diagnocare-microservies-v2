@@ -5,6 +5,15 @@ import pandas as pd
 import numpy as np
 import os
 import re
+import logging
+import socket
+try:
+    from dotenv import load_dotenv
+except Exception:
+    load_dotenv = None
+from flask_eureka import Eureka
+from flask_eureka.eureka import eureka_bp
+from flask_eureka.eurekaclient import EurekaClient
 from nlp_service import (
     load_translations, 
     extract_symptoms_from_text,
@@ -14,7 +23,53 @@ from nlp_service import (
     translate_symptom
 )
 
+if load_dotenv:
+    load_dotenv()
+
+logging.basicConfig(level=logging.INFO)
+
+def _patch_eureka_client():
+    """
+    flask-eureka-client hardcodes securePort enabled=true and relies on ifconfig for ipAddr.
+    Patch the instance data to disable secure port and use the configured hostname as ipAddr.
+    """
+    original_get_instance_data = EurekaClient.get_instance_data
+
+    def _get_instance_data(self):
+        data = original_get_instance_data(self)
+        instance = data.get('instance', {})
+        if self.host_name:
+            instance['ipAddr'] = self.host_name
+        secure_port = instance.get('securePort', {})
+        secure_port['@enabled'] = 'false'
+        secure_port['$'] = 443
+        instance['securePort'] = secure_port
+        data['instance'] = instance
+        return data
+
+    EurekaClient.get_instance_data = _get_instance_data
+
+def _detect_local_ip():
+    try:
+        with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as s:
+            s.connect(("8.8.8.8", 80))
+            return s.getsockname()[0]
+    except Exception:
+        return "localhost"
+
+SERVICE_NAME = os.getenv("SERVICE_NAME", "ml-prediction-service")
+EUREKA_SERVICE_URL = os.getenv("EUREKA_SERVICE_URL", "http://localhost:8761")
+EUREKA_INSTANCE_HOSTNAME = os.getenv("EUREKA_INSTANCE_HOSTNAME", _detect_local_ip())
+EUREKA_INSTANCE_PORT = int(os.getenv("EUREKA_INSTANCE_PORT", "5000"))
+
 app = Flask(__name__)
+app.config["SERVICE_NAME"] = SERVICE_NAME
+app.config["EUREKA_SERVICE_URL"] = EUREKA_SERVICE_URL
+app.config["EUREKA_INSTANCE_HOSTNAME"] = EUREKA_INSTANCE_HOSTNAME
+app.config["EUREKA_INSTANCE_PORT"] = EUREKA_INSTANCE_PORT
+app.config["EUREKA_INSTANCE_IP_ADDRESS"] = EUREKA_INSTANCE_HOSTNAME
+app.config["EUREKA_INSTANCE_SECURE_PORT_ENABLED"] = False
+app.config["EUREKA_INSTANCE_NON_SECURE_PORT_ENABLED"] = True
 app.config["SWAGGER"] = {
     "title": "DiagnoCare ML API",
     "uiversion": 3,
@@ -32,6 +87,18 @@ swagger_template = {
     ]
 }
 Swagger(app, template=swagger_template)
+
+app.logger.info("Initializing Eureka client...")
+_patch_eureka_client()
+eureka = Eureka(app)
+app.register_blueprint(eureka_bp)
+eureka.register_service(
+    name=app.config["SERVICE_NAME"],
+    vip_address=EUREKA_INSTANCE_HOSTNAME,
+    secure_vip_address=EUREKA_INSTANCE_HOSTNAME,
+)
+app.logger.info("Eureka client initialized.")
+
 
 # --- CONFIGURATION ---
 MODELS_DIR = 'models'

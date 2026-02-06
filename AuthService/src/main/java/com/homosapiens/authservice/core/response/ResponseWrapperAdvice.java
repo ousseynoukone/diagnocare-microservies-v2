@@ -34,8 +34,6 @@ public class ResponseWrapperAdvice implements ResponseBodyAdvice<Object> {
         int statusCode = HttpStatus.OK.value();
         if (response instanceof ServletServerHttpResponse servletResponse && servletResponse.getServletResponse() != null) {
             statusCode = servletResponse.getServletResponse().getStatus();
-        } else if (response.getStatusCode() != null) {
-            statusCode = response.getStatusCode().value();
         }
 
         String lang = resolveLang(request);

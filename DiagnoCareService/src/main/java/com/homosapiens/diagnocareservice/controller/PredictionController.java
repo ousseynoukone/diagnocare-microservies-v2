@@ -4,6 +4,8 @@ import com.homosapiens.diagnocareservice.dto.*;
 import com.homosapiens.diagnocareservice.model.entity.*;
 import com.homosapiens.diagnocareservice.model.entity.enums.GenderEnum;
 import com.homosapiens.diagnocareservice.service.*;
+import com.homosapiens.diagnocareservice.core.exception.AppException;
+import com.homosapiens.diagnocareservice.repository.SymptomRepository;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -12,6 +14,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
 
 import java.math.BigDecimal;
@@ -33,75 +36,67 @@ public class PredictionController {
     private final DoctorService doctorService;
     private final PathologyResultService pathologyResultService;
     private final UserService userService;
+    private final SymptomRepository symptomRepository;
 
     @PostMapping
     @Operation(summary = "Create a new prediction", description = "Creates a new AI prediction based on symptom session")
+    @Transactional(rollbackFor = Exception.class)
     public ResponseEntity<PredictionWithResultsResponse> makePrediction(
             @Valid @RequestBody SessionSymptomRequestDTO sessionSymptomRequestDTO) {
-        
-        try {
-            log.info("Creating prediction for session symptom request: userId={}", sessionSymptomRequestDTO.getUserId());
-            
-            // Create or get the session symptom
-            SessionSymptom sessionSymptom = sessionSymptomService.createSessionSymptom(sessionSymptomRequestDTO);
-            
-            // Resolve language from user profile (default: "fr")
-            String language = resolveUserLanguage(
-                    sessionSymptomRequestDTO.getUserId(),
-                    null
-            );
-            
-            // Use explicit symptoms (English) for prediction
-            List<String> extractedSymptoms = sessionSymptom.getSymptoms() != null
-                    ? sessionSymptom.getSymptoms().stream()
-                        .map(Symptom::getLabel)
-                        .toList()
-                    : List.of();
-            if (extractedSymptoms.isEmpty()) {
-                return ResponseEntity.badRequest().build();
-            }
-            log.info("Using {} symptoms for prediction (language: {})", extractedSymptoms.size(), language);
-            
-            // Get patient medical profile
-            Optional<PatientMedicalProfile> profileOpt = patientMedicalProfileService.getProfileByUserId(sessionSymptomRequestDTO.getUserId());
-            
-            // Build ML prediction request
-            MLPredictionRequestDTO mlRequest = buildMLRequest(extractedSymptoms, profileOpt, language);
-            
-            // Call ML service
-            MLPredictionResponseDTO mlResponse = mlPredictionClient.predict(mlRequest);
-            log.info("ML service returned {} predictions", mlResponse.getPredictions().size());
-            
-            // Determine if red alert (highest probability disease might be critical)
-            boolean isRedAlert = determineRedAlert(mlResponse);
-            
-            // Calculate global score (average of top prediction probabilities)
-            BigDecimal globalScore = calculateGlobalScore(mlResponse);
-            
-            // Create prediction entity
-            PredictionRequestDTO predictionRequest = new PredictionRequestDTO();
-            predictionRequest.setSessionSymptomId(sessionSymptom.getId());
-            predictionRequest.setGlobalScore(globalScore);
-            predictionRequest.setIsRedAlert(isRedAlert);
-            predictionRequest.setComment("AI prediction based on symptoms and patient profile");
-            
-            Prediction created = predictionService.createPrediction(predictionRequest);
-            
-            // Create pathology results for top predictions (using descriptions from Flask)
-            createPathologyResults(created, mlResponse, language);
-            
-            log.info("Prediction created successfully with id: {}", created.getId());
-            PredictionDTO predictionDTO = predictionService.convertToDTO(created);
-            PredictionWithResultsResponse response = PredictionWithResultsResponse.builder()
-                    .prediction(predictionDTO)
-                    .mlResults(mlResponse)
-                    .build();
-            return ResponseEntity.status(HttpStatus.CREATED).body(response);
-            
-        } catch (Exception e) {
-            log.error("Error creating prediction", e);
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+
+        log.info("Creating prediction for session symptom request: userId={}", sessionSymptomRequestDTO.getUserId());
+
+        // Resolve language from user profile (default: "fr")
+        String language = resolveUserLanguage(
+                sessionSymptomRequestDTO.getUserId(),
+                null
+        );
+
+        // Use explicit symptoms (English) for prediction without persisting
+        List<String> extractedSymptoms = resolveSymptomsForPrediction(sessionSymptomRequestDTO);
+        if (extractedSymptoms.isEmpty()) {
+            return ResponseEntity.badRequest().build();
         }
+        log.info("Using {} symptoms for prediction (language: {})", extractedSymptoms.size(), language);
+
+        // Get patient medical profile
+        Optional<PatientMedicalProfile> profileOpt = patientMedicalProfileService.getProfileByUserId(sessionSymptomRequestDTO.getUserId());
+
+        // Build ML prediction request
+        MLPredictionRequestDTO mlRequest = buildMLRequest(extractedSymptoms, profileOpt, language);
+
+        // Call ML service (if this fails, nothing is persisted)
+        MLPredictionResponseDTO mlResponse = mlPredictionClient.predict(mlRequest);
+        log.info("ML service returned {} predictions", mlResponse.getPredictions().size());
+
+        // Determine if red alert (highest probability disease might be critical)
+        boolean isRedAlert = determineRedAlert(mlResponse);
+
+        // Calculate global score (average of top prediction probabilities)
+        BigDecimal globalScore = calculateGlobalScore(mlResponse);
+
+        // Persist session symptom only after ML succeeds
+        SessionSymptom sessionSymptom = sessionSymptomService.createSessionSymptom(sessionSymptomRequestDTO);
+
+        // Create prediction entity
+        PredictionRequestDTO predictionRequest = new PredictionRequestDTO();
+        predictionRequest.setSessionSymptomId(sessionSymptom.getId());
+        predictionRequest.setGlobalScore(globalScore);
+        predictionRequest.setIsRedAlert(isRedAlert);
+        predictionRequest.setComment("AI prediction based on symptoms and patient profile");
+
+        Prediction created = predictionService.createPrediction(predictionRequest);
+
+        // Create pathology results for top predictions (using descriptions from Flask)
+        createPathologyResults(created, mlResponse, language);
+
+        log.info("Prediction created successfully with id: {}", created.getId());
+        PredictionDTO predictionDTO = predictionService.convertToDTO(created);
+        PredictionWithResultsResponse response = PredictionWithResultsResponse.builder()
+                .prediction(predictionDTO)
+                .mlResults(mlResponse)
+                .build();
+        return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
     
     private MLPredictionRequestDTO buildMLRequest(List<String> symptoms, Optional<PatientMedicalProfile> profileOpt, String language) {
@@ -178,6 +173,24 @@ public class PredictionController {
             language = fallbackLanguage;
         }
         return normalizeLanguage(language);
+    }
+
+    private List<String> resolveSymptomsForPrediction(SessionSymptomRequestDTO requestDTO) {
+        if (requestDTO.getSymptomIds() != null && !requestDTO.getSymptomIds().isEmpty()) {
+            List<Symptom> symptoms = symptomRepository.findAllById(requestDTO.getSymptomIds());
+            if (symptoms.size() != requestDTO.getSymptomIds().size()) {
+                throw new AppException(HttpStatus.NOT_FOUND, "One or more symptoms not found");
+            }
+            return symptoms.stream()
+                    .map(Symptom::getLabel)
+                    .toList();
+        }
+
+        if (requestDTO.getSymptomLabels() != null && !requestDTO.getSymptomLabels().isEmpty()) {
+            return requestDTO.getSymptomLabels();
+        }
+
+        throw new AppException(HttpStatus.BAD_REQUEST, "Symptoms are required");
     }
 
     private String normalizeLanguage(String language) {

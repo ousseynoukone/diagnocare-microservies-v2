@@ -51,47 +51,4 @@ public class MLPredictionClient {
         }
     }
 
-    public List<String> extractSymptoms(String rawDescription, String language) {
-        try {
-            String url = mlServiceConfig.getMlServiceUrl() + "/extract-symptoms";
-            log.info("Calling ML service for symptom extraction at: {}", url);
-            
-            MLSymptomExtractionRequestDTO request = MLSymptomExtractionRequestDTO.builder()
-                    .raw_description(rawDescription)
-                    .language(language != null ? language : "fr")
-                    .build();
-            
-            ResponseEntity<MLSymptomExtractionResponseDTO> response = restTemplate.postForEntity(
-                    url,
-                    request,
-                    MLSymptomExtractionResponseDTO.class
-            );
-
-            if (response.getStatusCode().is2xxSuccessful() && response.getBody() != null) {
-                List<String> symptoms = response.getBody().getSymptoms();
-                log.info("ML symptom extraction successful. Found {} symptoms", 
-                        symptoms != null ? symptoms.size() : 0);
-                return symptoms != null ? symptoms : List.of();
-            } else {
-                log.error("ML service returned non-success status: {}", response.getStatusCode());
-                throw new AppException(HttpStatus.INTERNAL_SERVER_ERROR, 
-                        "ML service returned an error: " + response.getStatusCode());
-            }
-        } catch (RestClientException e) {
-            log.error("Error calling ML service for symptom extraction: {}", e.getMessage(), e);
-            throw new AppException(HttpStatus.SERVICE_UNAVAILABLE, 
-                    "ML service is unavailable: " + e.getMessage());
-        }
-    }
-
-    public boolean healthCheck() {
-        try {
-            String url = mlServiceConfig.getMlServiceUrl() + "/health";
-            ResponseEntity<String> response = restTemplate.getForEntity(url, String.class);
-            return response.getStatusCode().is2xxSuccessful();
-        } catch (RestClientException e) {
-            log.warn("ML service health check failed: {}", e.getMessage());
-            return false;
-        }
-    }
 }
