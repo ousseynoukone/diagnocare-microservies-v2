@@ -8,7 +8,7 @@ import java.time.LocalDateTime;
 @Data
 public class PredictionDTO {
     private Long id;
-    private BigDecimal globalScore;
+    private BigDecimal bestScore;
     private String pdfReportUrl;
     private Boolean isRedAlert;
     private String comment;

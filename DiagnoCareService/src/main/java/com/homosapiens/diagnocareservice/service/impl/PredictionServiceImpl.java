@@ -36,7 +36,7 @@ public class PredictionServiceImpl implements PredictionService {
 
         Prediction prediction = new Prediction();
         prediction.setSessionSymptom(sessionSymptom);
-        prediction.setGlobalScore(requestDTO.getGlobalScore());
+        prediction.setBestScore(requestDTO.getBestScore());
         prediction.setIsRedAlert(requestDTO.getIsRedAlert() != null ? requestDTO.getIsRedAlert() : false);
         prediction.setComment(requestDTO.getComment());
 
@@ -67,8 +67,8 @@ public class PredictionServiceImpl implements PredictionService {
                 .orElseThrow(() -> new AppException(HttpStatus.NOT_FOUND, 
                         "Prediction not found with id: " + id));
 
-        if (requestDTO.getGlobalScore() != null) {
-            prediction.setGlobalScore(requestDTO.getGlobalScore());
+        if (requestDTO.getBestScore() != null) {
+            prediction.setBestScore(requestDTO.getBestScore());
         }
         if (requestDTO.getIsRedAlert() != null) {
             prediction.setIsRedAlert(requestDTO.getIsRedAlert());
@@ -119,7 +119,7 @@ public class PredictionServiceImpl implements PredictionService {
     public PredictionDTO convertToDTO(Prediction prediction) {
         PredictionDTO dto = new PredictionDTO();
         dto.setId(prediction.getId());
-        dto.setGlobalScore(prediction.getGlobalScore());
+        dto.setBestScore(prediction.getBestScore());
         dto.setPdfReportUrl(prediction.getPdfReportUrl());
         dto.setIsRedAlert(prediction.getIsRedAlert());
         dto.setComment(prediction.getComment());

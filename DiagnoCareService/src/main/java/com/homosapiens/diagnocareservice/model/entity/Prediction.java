@@ -14,7 +14,7 @@ import java.util.List;
 public class Prediction extends BaseEntity {
 
     @Column(name = "global_score", precision = 10, scale = 2)
-    private BigDecimal globalScore;
+    private BigDecimal bestScore;
 
     @Column(name = "pdf_report_url", length = 500)
     private String pdfReportUrl;

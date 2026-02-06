@@ -11,7 +11,7 @@ public class PredictionRequestDTO {
     @NotNull(message = "Session symptom ID is required")
     private Long sessionSymptomId;
     
-    private BigDecimal globalScore;
+    private BigDecimal bestScore;
     private Boolean isRedAlert;
     private String comment;
     private Long previousPredictionId;

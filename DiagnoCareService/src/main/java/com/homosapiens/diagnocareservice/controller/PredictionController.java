@@ -73,7 +73,7 @@ public class PredictionController {
         boolean isRedAlert = determineRedAlert(mlResponse);
 
         // Calculate global score (average of top prediction probabilities)
-        BigDecimal globalScore = calculateGlobalScore(mlResponse);
+        BigDecimal bestScore = calculateGlobalScore(mlResponse);
 
         // Persist session symptom only after ML succeeds
         SessionSymptom sessionSymptom = sessionSymptomService.createSessionSymptom(sessionSymptomRequestDTO);
@@ -81,7 +81,7 @@ public class PredictionController {
         // Create prediction entity
         PredictionRequestDTO predictionRequest = new PredictionRequestDTO();
         predictionRequest.setSessionSymptomId(sessionSymptom.getId());
-        predictionRequest.setGlobalScore(globalScore);
+        predictionRequest.setBestScore(bestScore);
         predictionRequest.setIsRedAlert(isRedAlert);
         predictionRequest.setComment("AI prediction based on symptoms and patient profile");
 
@@ -222,23 +222,8 @@ public class PredictionController {
         if (mlResponse.getPredictions() == null || mlResponse.getPredictions().isEmpty()) {
             return BigDecimal.ZERO;
         }
-
-        // Weighted score: give more importance to top prediction
-        double[] weights = {0.6, 0.3, 0.1};
-        double weightedSum = 0.0;
-        double weightTotal = 0.0;
-
-        for (int i = 0; i < Math.min(3, mlResponse.getPredictions().size()); i++) {
-            Double prob = mlResponse.getPredictions().get(i).getProbability();
-            double value = prob != null ? prob : 0.0;
-            weightedSum += value * weights[i];
-            weightTotal += weights[i];
-        }
-
-        if (weightTotal == 0.0) {
-            return BigDecimal.ZERO;
-        }
-        return BigDecimal.valueOf(weightedSum / weightTotal);
+        Double bestProb = mlResponse.getPredictions().get(0).getProbability();
+        return BigDecimal.valueOf(bestProb != null ? bestProb : 0.0);
     }
     
     private void createPathologyResults(Prediction prediction, MLPredictionResponseDTO mlResponse, String language) {
