@@ -108,7 +108,7 @@ public class PredictionController {
             PatientMedicalProfile profile = profileOpt.get();
             builder.age(profile.getAge())
                    .weight(profile.getWeight())
-                   .bmi(profile.getBmi())
+                   .bmi((float) profile.getBmi())
                    .tension_moyenne(profile.getMeanBloodPressure())
                    .cholesterole_moyen(profile.getMeanCholesterol())
                    .gender(profile.getGender() != null ? profile.getGender().name() : "Male")
