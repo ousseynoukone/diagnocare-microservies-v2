@@ -37,6 +37,7 @@ public class PredictionController {
     private final PathologyResultService pathologyResultService;
     private final UserService userService;
     private final SymptomRepository symptomRepository;
+    private final UrgentDiseaseService urgentDiseaseService;
 
     @PostMapping
     @Operation(summary = "Create a new prediction", description = "Creates a new AI prediction based on symptom session")
@@ -202,18 +203,9 @@ public class PredictionController {
     }
     
     private boolean determineRedAlert(MLPredictionResponseDTO mlResponse) {
-        // Red alert if top prediction has very high probability (>90%) or specific critical diseases
         if (mlResponse.getPredictions() != null && !mlResponse.getPredictions().isEmpty()) {
             MLPredictionResponseDTO.PredictionResult topResult = mlResponse.getPredictions().get(0);
-            if (topResult.getProbability() != null && topResult.getProbability() > 90.0) {
-                return true;
-            }
-            // Check for critical disease names (can be extended)
-            String disease = topResult.getDisease() != null ? topResult.getDisease().toLowerCase() : "";
-            if (disease.contains("heart") || disease.contains("cardiac") || 
-                disease.contains("stroke") || disease.contains("severe")) {
-                return true;
-            }
+            return urgentDiseaseService.isUrgentDisease(topResult.getDisease());
         }
         return false;
     }
