@@ -78,9 +78,6 @@ public class CheckInServiceImpl implements CheckInService {
 
         CheckIn existingCheckIn = checkInRepository.findByPreviousPredictionIdAndUserId(previousPrediction.getId(), user.getId())
                 .orElse(null);
-        if (existingCheckIn != null && CheckInStatus.COMPLETED.equals(existingCheckIn.getStatus())) {
-            throw new AppException(HttpStatus.BAD_REQUEST, "Check-in already completed for this prediction");
-        }
 
         SessionSymptomRequestDTO symptomRequestDTO = new SessionSymptomRequestDTO();
         symptomRequestDTO.setUserId(requestDTO.getUserId());
