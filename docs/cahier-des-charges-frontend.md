@@ -10,18 +10,75 @@ DiagnoCare permet aux patients de:
 - Patients grand public.
 - Utilisateurs non techniques, besoin d’un parcours simple, rassurant, et très lisible.
 
-### 3) Langues
+### 3) Présentation & objectifs (cahier des charges)
+**Présentation du projet**
+DiagnoCare est une plateforme de santé intelligente conçue pour accompagner l’utilisateur
+de l’apparition des symptômes jusqu’à la consultation médicale. Contrairement aux
+plateformes de gestion de cabinet, DiagnoCare se concentre sur l’analyse prédictive,
+l’orientation vers le bon spécialiste et la préparation du patient, avant de le rediriger
+vers des services de prise de rendez‑vous externes.
+
+**Objectifs principaux**
+- Analyse prédictive: identifier les pathologies potentielles à partir des symptômes saisis.
+- Orientation intelligente: mapper les résultats vers la spécialité médicale appropriée.
+- Localisation et redirection: trouver des praticiens à proximité et rediriger vers leurs
+  plateformes de réservation habituelles (ex: Doctolib).
+- Accompagnement: suivre l’évolution de l’état de santé et préparer le patient à sa consultation.
+
+**Fonctionnalités clés (Phase 1: MVP)**
+1) Moteur de prédiction de symptômes
+   - Interface intuitive pour la saisie des symptômes.
+   - Algorithme de probabilité suggérant les pathologies possibles.
+   - Alerte "Red Flag": en cas de risque critique, afficher les numéros d’urgence et ne
+     pas orienter vers une prise de rendez‑vous.
+2) Suivi de l’évolution des symptômes
+   - Historisation de la première saisie.
+   - Check‑in temporel (24h / 48h) demandant amélioration, stabilité ou aggravation.
+   - Réévaluation: si aggravation, recommandation vers un niveau de soin supérieur.
+3) Recherche et redirection géolocalisée
+   - Identification automatique des spécialistes correspondant à la pathologie prédite.
+   - Recherche via Google (Google Maps Platform / Places API) pour trouver les praticiens.
+   - Affichage des médecins à proximité via carte interactive (Google Maps).
+   - Lien direct vers les plateformes externes pour finaliser la réservation.
+4) Générateur de "Résumé de consultation"
+   - Objectif: éviter l’oubli d’informations cruciales avant/pdt la consultation.
+   - Génération automatique d’un résumé médical structuré après l’évaluation.
+   - Format: PDF, copiable ou consultable sur téléphone.
+   - Contenu clé: symptômes (durée/évolution), red flags, pathologies potentielles,
+     spécialité recommandée, questions pertinentes à poser.
+   - Valeur: préparation efficace sans risque médical.
+
+**Évolutions stratégiques (Phase 2: assistant proactif)**
+5) Intégration des données de santé connectées (wearables)
+   - Hub de données: Google Health Connect (Android) + Apple HealthKit (iOS).
+   - Données objectives: fréquence cardiaque, SpO2, sommeil, etc.
+   - Précision accrue: croiser symptômes déclarés et données réelles.
+
+**Architecture technique simplifiée**
+- Frontend: interface web/mobile réactive et claire.
+- Backend: API REST (prédiction + profils utilisateurs).
+- Intégrations tierces:
+  - Cartographie et recherche: Google Maps Platform (Maps + Places).
+  - Données santé: HealthKit / Health Connect.
+  - Deep‑linking vers plateformes de réservation.
+
+**Sécurité & confidentialité**
+- Anonymisation des données de symptômes lors des phases d’analyse.
+- Chiffrement de bout en bout pour les résumés.
+- Conformité RGPD.
+
+### 4) Langues
 - FR par défaut, EN supportée.
 - Toute information affichée doit respecter la langue utilisateur.
 - Bouton de changement de langue (si prévu par le produit) ou auto-détection via profil.
 
-### 4) Règles UX globales
+### 5) Règles UX globales
 - Ton rassurant et médical, éviter les formulations alarmistes.
 - Afficher un avertissement clair: “Ce n’est pas un diagnostic médical”.
 - Toujours proposer une action suivante (rendez‑vous, questions à poser).
 - Accessibilité: contrastes élevés, tailles de police lisibles, icônes explicites.
 
-### 5) Arborescence (IA)
+### 6) Arborescence (IA)
 - Page de présentation (avant authentification)
   - Hero + proposition de valeur
   - Fonctionnalités clés
@@ -56,7 +113,7 @@ DiagnoCare permet aux patients de:
   - Gestion du compte
 - Aide / FAQ / Contact
 
-### 6) Écrans détaillés
+### 7) Écrans détaillés
 
 #### 6.0 Page de présentation (Landing)
 Sections obligatoires:
@@ -185,7 +242,7 @@ Sections:
 - Mot de passe faible
 - Email déjà utilisé
 
-### 7) Composants UI réutilisables
+### 8) Composants UI réutilisables
 - Cards résultats
 - Badges (red flag, suivi)
 - Timeline item
@@ -193,7 +250,7 @@ Sections:
 - Toasts succès/erreur
 - Loader/skeleton
 
-### 8) États & erreurs
+### 9) États & erreurs
 Prévoir:
 - Aucun résultat
 - Erreur API
@@ -201,7 +258,7 @@ Prévoir:
 - Red flag détecté (bannière prioritaire)
 - PDF généré / échec PDF
 
-### 9) Données clés à afficher (référence API)
+### 10) Données clés à afficher (référence API)
 Pour une prédiction:
 - id, date, bestScore, isRedAlert
 - pathologies (nom + score)
@@ -212,7 +269,7 @@ Pour un suivi:
 - outcome, status
 - delta score
 
-### 10) Ton et style visuel
+### 11) Ton et style visuel
 - Couleurs sobres, médicales (bleu/gris)
 - Rouge réservé aux alertes
 - Icônes simples: cœur, stéthoscope, alerte, graphique
