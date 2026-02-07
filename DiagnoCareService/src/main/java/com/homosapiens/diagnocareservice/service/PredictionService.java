@@ -15,6 +15,7 @@ public interface PredictionService {
     List<Prediction> getAllPredictions();
     List<Prediction> getRedAlertPredictions();
     List<Prediction> getPredictionsBySessionSymptomId(Long sessionSymptomId);
+    List<Prediction> getPredictionsByUserId(Long userId);
     PredictionDTO convertToDTO(Prediction prediction);
     List<PredictionDTO> convertToDTOList(List<Prediction> predictions);
 }

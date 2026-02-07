@@ -26,6 +26,13 @@ public class ResponseWrapperAdvice implements ResponseBodyAdvice<Object> {
         if (isSwaggerPath(request)) {
             return body;
         }
+        if (body instanceof byte[] || body instanceof java.io.ByteArrayOutputStream) {
+            return body;
+        }
+        if (selectedContentType != null && (MediaType.APPLICATION_PDF.isCompatibleWith(selectedContentType)
+                || MediaType.APPLICATION_OCTET_STREAM.isCompatibleWith(selectedContentType))) {
+            return body;
+        }
         if (body instanceof CustomResponseEntity) {
             return body;
         }

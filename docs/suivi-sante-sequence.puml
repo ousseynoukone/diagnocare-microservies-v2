@@ -1,0 +1,57 @@
+@startuml
+title Suivi santé — Séquence
+
+actor "Utilisateur" as User
+participant "Gateway API" as Gateway
+participant "DiagnoCare Service" as DiagnoCare
+participant "Service ML" as ML
+database "Base de données" as DB
+
+User -> Gateway: POST /suivi-sante\n{userId, previousPredictionId, symptômes}
+Gateway -> DiagnoCare: Transmettre la demande
+
+DiagnoCare -> DB: Charger prediction précédente + utilisateur
+DB --> DiagnoCare: OK | absent
+
+alt Prediction ou utilisateur introuvable
+  DiagnoCare --> Gateway: 404
+  Gateway --> User: 404
+  return
+end
+
+DiagnoCare -> DiagnoCare: Valider appartenance prediction↔utilisateur
+alt Incohérence
+  DiagnoCare --> Gateway: 400
+  Gateway --> User: 400
+  return
+end
+
+DiagnoCare -> ML: Prédire (symptômes + profil)
+ML --> DiagnoCare: Résultats
+
+DiagnoCare -> DiagnoCare: Comparer ancienne vs nouvelle prediction
+note right
+Comparaison: delta = newBestScore - oldBestScore
+WORSENING si:
+- red flag OU
+- maladie urgente OU
+- delta >= seuil
+IMPROVING si delta <= -seuil
+STABLE sinon
+end note
+
+alt Red flag / urgence / score↑
+  DiagnoCare -> DiagnoCare: outcome = WORSENING
+else Amélioration
+  DiagnoCare -> DiagnoCare: outcome = IMPROVING
+else Stable
+  DiagnoCare -> DiagnoCare: outcome = STABLE
+end
+
+DiagnoCare -> DB: Enregistrer session + prediction + résultats + suivi santé COMPLETED
+DB --> DiagnoCare: OK
+
+DiagnoCare --> Gateway: 201 + SuiviSanteResponse
+Gateway --> User: 201 + réponse
+
+@enduml

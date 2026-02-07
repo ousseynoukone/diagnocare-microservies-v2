@@ -116,6 +116,12 @@ public class PredictionServiceImpl implements PredictionService {
     }
 
     @Override
+    @Transactional(readOnly = true)
+    public List<Prediction> getPredictionsByUserId(Long userId) {
+        return predictionRepository.findBySessionSymptomUserId(userId);
+    }
+
+    @Override
     public PredictionDTO convertToDTO(Prediction prediction) {
         PredictionDTO dto = new PredictionDTO();
         dto.setId(prediction.getId());

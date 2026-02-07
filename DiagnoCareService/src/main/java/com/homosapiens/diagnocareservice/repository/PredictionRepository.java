@@ -14,4 +14,5 @@ public interface PredictionRepository extends JpaRepository<Prediction, Long> {
     List<Prediction> findBySessionSymptomId(Long sessionSymptomId);
     List<Prediction> findByIsRedAlert(Boolean isRedAlert);
     List<Prediction> findByPreviousPredictionId(Long previousPredictionId);
+    List<Prediction> findBySessionSymptomUserId(Long userId);
 }

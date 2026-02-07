@@ -6,9 +6,9 @@ services:
       POSTGRES_DB: ${AUTH_DB_NAME:-auth_db}
       POSTGRES_USER: ${DB_USERNAME}
       POSTGRES_PASSWORD: ${DB_PASSWORD}
-    # TO COMMENT ON DEPLOYMENT
-    ports:
-      - "5432:5432"
+    # Internal only (do not expose in deployment)
+    # ports:
+    #   - "5432:5432"
     volumes:
       - auth_postgres_data:/var/lib/postgresql/data
     healthcheck:
@@ -24,9 +24,9 @@ services:
       POSTGRES_DB: ${DIAGNOCARE_DB_NAME:-diagnocare_db}
       POSTGRES_USER: ${DB_USERNAME}
       POSTGRES_PASSWORD: ${DB_PASSWORD}
-    # TO COMMENT ON DEPLOYMENT
-    ports:
-      - "5433:5432"
+    # Internal only (do not expose in deployment)
+    # ports:
+    #   - "5433:5432"
     volumes:
       - diagnocare_postgres_data:/var/lib/postgresql/data
     healthcheck:
@@ -39,8 +39,9 @@ services:
     image: dpage/pgadmin4
     container_name: pgadmin4
     restart: always
-    ports:
-      - "8888:80"
+    # Optional admin UI; expose only if needed
+    # ports:
+    #   - "8888:80"
     environment:
       PGADMIN_DEFAULT_EMAIL: ${DB_USERNAME}@ok.com
       PGADMIN_DEFAULT_PASSWORD: ${DB_PASSWORD}
@@ -53,16 +54,18 @@ services:
   registry-service:
     build: ./RegistryService/.
     restart: always
-    ports:
-      - '8761:8761'
+    # Optional Eureka UI; expose only if needed
+    # ports:
+    #   - '8761:8761'
     # env_file:
     #   - .env
 
   auth-service:
     build: ./AuthService/.
     restart: always
-    ports:
-      - '${AUTH_PORT:-8081}:8081'
+    # Optional direct access; otherwise route via gateway
+    # ports:
+    #   - '${AUTH_PORT:-8081}:8081'
     env_file:
       - .env
     environment:
@@ -113,9 +116,10 @@ services:
     image: apache/kafka:latest
     container_name: kafka-broker
     restart: always
-    ports:
-      - "9092:9092"      # Internal broker port
-      - "29092:29092"    # External access port
+    # Internal only; expose 29092 only if external clients need Kafka
+    # ports:
+    #   - "9092:9092"      # Internal broker port
+    #   - "29092:29092"    # External access port
     environment:
       # KRaft Configuration (Kafka without Zookeeper)
       KAFKA_NODE_ID: 1
@@ -168,8 +172,9 @@ services:
     image: provectuslabs/kafka-ui:latest
     container_name: kafka-ui
     restart: always
-    ports:
-      - "8083:8080"
+    # Optional admin UI; expose only if needed
+    # ports:
+    #   - "8083:8080"
     environment:
       KAFKA_CLUSTERS_0_NAME: diagnocare-cluster
       KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: kafka:9092
@@ -183,8 +188,9 @@ services:
     build: ./MlPredictionService/.
     container_name: ml-prediction-service
     restart: always
-    ports:
-      - "5000:5000"
+    # Optional direct access; otherwise call internally
+    # ports:
+    #   - "5000:5000"
     environment:
       - FLASK_ENV=production
       - FLASK_APP=app.py

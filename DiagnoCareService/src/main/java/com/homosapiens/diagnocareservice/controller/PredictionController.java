@@ -87,6 +87,14 @@ public class PredictionController {
         return ResponseEntity.ok(predictionService.convertToDTOList(predictions));
     }
 
+    @GetMapping("/user/{userId}")
+    @Operation(summary = "Get predictions by user ID", description = "Retrieves all predictions for a specific user")
+    public ResponseEntity<List<PredictionDTO>> getPredictionsByUserId(
+            @Parameter(description = "User ID") @PathVariable Long userId) {
+        List<Prediction> predictions = predictionService.getPredictionsByUserId(userId);
+        return ResponseEntity.ok(predictionService.convertToDTOList(predictions));
+    }
+
     @GetMapping
     @Operation(summary = "Get all predictions", description = "Retrieves all predictions in the system")
     public ResponseEntity<List<PredictionDTO>> getAllPredictions() {

@@ -242,6 +242,48 @@ def extract_symptoms():
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
+@app.route('/translate', methods=['POST'])
+def translate():
+    """Translate symptoms, diseases, and specialists to requested language"""
+    try:
+        data = request.json or {}
+        language = data.get('language', 'fr').lower()
+        if language not in ['fr', 'en']:
+            language = 'fr'
+
+        symptoms = data.get('symptoms', [])
+        diseases = data.get('diseases', [])
+        specialists = data.get('specialists', [])
+
+        if symptoms is None:
+            symptoms = []
+        if diseases is None:
+            diseases = []
+        if specialists is None:
+            specialists = []
+
+        if not isinstance(symptoms, list) or not isinstance(diseases, list) or not isinstance(specialists, list):
+            return jsonify({"error": "symptoms, diseases, and specialists must be arrays"}), 400
+
+        translated_symptoms = [
+            translate_symptom(s, translations, target_lang=language) for s in symptoms if s
+        ]
+        translated_diseases = [
+            translate_disease(d, translations, target_lang=language) for d in diseases if d
+        ]
+        translated_specialists = [
+            translate_specialist(s, translations, target_lang=language) for s in specialists if s
+        ]
+
+        return jsonify({
+            "language": language,
+            "symptoms": translated_symptoms,
+            "diseases": translated_diseases,
+            "specialists": translated_specialists
+        }), 200
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
 @app.route('/predict', methods=['POST'])
 def predict():
     """
