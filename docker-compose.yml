@@ -54,9 +54,8 @@ services:
   registry-service:
     build: ./RegistryService/.
     restart: always
-    # Optional Eureka UI; expose only if needed
-    # ports:
-    #   - '8761:8761'
+    ports:
+      - '8761:8761'
     # env_file:
     #   - .env
 
@@ -172,9 +171,8 @@ services:
     image: provectuslabs/kafka-ui:latest
     container_name: kafka-ui
     restart: always
-    # Optional admin UI; expose only if needed
-    # ports:
-    #   - "8083:8080"
+    ports:
+      - "8083:8080"
     environment:
       KAFKA_CLUSTERS_0_NAME: diagnocare-cluster
       KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: kafka:9092

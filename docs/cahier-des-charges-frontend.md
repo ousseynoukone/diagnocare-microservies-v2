@@ -1,4 +1,4 @@
-## Cahier des charges — Frontend DiagnoCare (Figma)
+## Cahier des charges — DiagnoCare (état actuel basé sur l’implémentation)
 
 ### 1) Objectif du produit
 DiagnoCare permet aux patients de:
@@ -18,32 +18,32 @@ plateformes de gestion de cabinet, DiagnoCare se concentre sur l’analyse préd
 l’orientation vers le bon spécialiste et la préparation du patient, avant de le rediriger
 vers des services de prise de rendez‑vous externes.
 
-**Objectifs principaux**
+**Objectifs principaux (état actuel)**
 - Analyse prédictive: identifier les pathologies potentielles à partir des symptômes saisis.
 - Orientation intelligente: mapper les résultats vers la spécialité médicale appropriée.
-- Localisation et redirection: trouver des praticiens à proximité et rediriger vers leurs
-  plateformes de réservation habituelles (ex: Doctolib).
-- Accompagnement: suivre l’évolution de l’état de santé et préparer le patient à sa consultation.
+- Localisation et redirection: géré côté frontend (pas d’API backend dédiée).
+- Accompagnement: suivi via check-ins automatiques + réévaluations.
 
 **Fonctionnalités clés (Phase 1: MVP)**
 1) Moteur de prédiction de symptômes
    - Interface intuitive pour la saisie des symptômes.
    - Algorithme de probabilité suggérant les pathologies possibles.
-   - Alerte "Red Flag": en cas de risque critique, afficher les numéros d’urgence et ne
-     pas orienter vers une prise de rendez‑vous.
+   - Alerte "Red Flag": le backend retourne un flag (basé sur la liste des pathologies urgentes).
+     Le blocage de prise de rendez‑vous se fait côté frontend.
 2) Suivi de l’évolution des symptômes
    - Historisation de la première saisie.
-   - Check‑in temporel (24h / 48h) demandant amélioration, stabilité ou aggravation.
-   - Réévaluation: si aggravation, recommandation vers un niveau de soin supérieur.
+   - Check‑in temporel (24h / 48h) automatiquement planifié côté backend.
+   - Rappels par email si le scheduler et l’email sont configurés.
+   - Check‑in possible sans email via l’UI (soumission manuelle).
+   - Réévaluation: le backend crée une nouvelle prédiction de suivi et calcule l’évolution.
 3) Recherche et redirection géolocalisée
    - Identification automatique des spécialistes correspondant à la pathologie prédite.
-   - Recherche via Google (Google Maps Platform / Places API) pour trouver les praticiens.
-   - Affichage des médecins à proximité via carte interactive (Google Maps).
-   - Lien direct vers les plateformes externes pour finaliser la réservation.
+   - Recherche/affichage via Google Maps / Doctolib à implémenter côté frontend.
+   - Aucun endpoint backend dédié pour la géolocalisation.
 4) Générateur de "Résumé de consultation"
    - Objectif: éviter l’oubli d’informations cruciales avant/pdt la consultation.
    - Génération automatique d’un résumé médical structuré après l’évaluation.
-   - Format: PDF, copiable ou consultable sur téléphone.
+   - Format: PDF téléchargeable via endpoint backend.
    - Contenu clé: symptômes (durée/évolution), red flags, pathologies potentielles,
      spécialité recommandée, questions pertinentes à poser.
    - Valeur: préparation efficace sans risque médical.
@@ -56,16 +56,16 @@ vers des services de prise de rendez‑vous externes.
 
 **Architecture technique simplifiée**
 - Frontend: interface web/mobile réactive et claire.
-- Backend: API REST (prédiction + profils utilisateurs).
+- Backend: API REST (prédiction, profils médicaux, check-ins, résumé PDF).
 - Intégrations tierces:
   - Cartographie et recherche: Google Maps Platform (Maps + Places).
   - Données santé: HealthKit / Health Connect.
   - Deep‑linking vers plateformes de réservation.
 
-**Sécurité & confidentialité**
-- Anonymisation des données de symptômes lors des phases d’analyse.
-- Chiffrement de bout en bout pour les résumés.
-- Conformité RGPD.
+**Sécurité & confidentialité (à préciser / non implémenté côté backend)**
+- Pas d’anonymisation automatique documentée.
+- Pas de chiffrement de bout en bout pour les résumés PDF.
+- Conformité RGPD à définir selon les exigences du projet.
 
 ### 4) Langues
 - FR par défaut, EN supportée.
@@ -168,7 +168,7 @@ Doit afficher:
 Actions:
 - “Télécharger PDF”
 - “Poser des questions au médecin”
-- “Planifier un suivi”
+- “Planifier un suivi” (actuellement: suivi automatique, pas de planification manuelle)
 
 #### 6.5 Suivi (check‑in)
 Affichage d’un suivi:
@@ -256,7 +256,7 @@ Prévoir:
 - Erreur API
 - Service ML indisponible
 - Red flag détecté (bannière prioritaire)
-- PDF généré / échec PDF
+- PDF généré / échec PDF (téléchargement direct, pas de stockage persistant)
 
 ### 10) Données clés à afficher (référence API)
 Pour une prédiction:
