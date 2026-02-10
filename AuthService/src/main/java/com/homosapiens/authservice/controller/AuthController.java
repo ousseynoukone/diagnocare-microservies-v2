@@ -9,6 +9,8 @@ import com.homosapiens.authservice.model.dtos.RefreshTokenRequest;
 import com.homosapiens.authservice.model.dtos.UserLoginDto;
 import com.homosapiens.authservice.model.dtos.UserRegisterDto;
 import com.homosapiens.authservice.model.dtos.UserUpdateDto;
+import com.homosapiens.authservice.model.dtos.OtpSendRequest;
+import com.homosapiens.authservice.model.dtos.OtpValidateRequest;
 import com.homosapiens.authservice.service.AuthService;
 import com.homosapiens.authservice.service.helpers.ValidationHelper;
 import com.homosapiens.authservice.core.locale.LanguageUtil;
@@ -112,6 +114,36 @@ public class AuthController {
         return ResponseEntity.ok(authService.refreshToken(request.getRefreshToken()));
     }
 
+    @PostMapping("otp/send")
+    @Operation(summary = "Send OTP", description = "Send email verification OTP")
+    public ResponseEntity<?> sendOtp(@RequestBody @Valid OtpSendRequest request, BindingResult bindingResult, HttpServletRequest httpRequest) {
+        if (bindingResult.hasErrors()) {
+            return ValidationHelper.buildValidationReponse(bindingResult, LanguageUtil.resolveLang(httpRequest));
+        }
+        String lang = LanguageUtil.resolveLang(httpRequest);
+        authService.sendVerificationOtp(request.getEmail(), lang);
+        return ResponseEntity.ok(
+                CustomResponseEntity.builder()
+                        .statusCode(HttpStatus.OK.value())
+                        .message(LanguageUtil.translateMessage("OTP sent", lang))
+                        .build()
+        );
+    }
+
+    @PostMapping("otp/validate")
+    @Operation(summary = "Validate OTP", description = "Validate email verification OTP")
+    public ResponseEntity<?> validateOtp(@RequestBody @Valid OtpValidateRequest request, BindingResult bindingResult, HttpServletRequest httpRequest) {
+        if (bindingResult.hasErrors()) {
+            return ValidationHelper.buildValidationReponse(bindingResult, LanguageUtil.resolveLang(httpRequest));
+        }
+        authService.validateVerificationOtp(request.getEmail(), request.getCode());
+        return ResponseEntity.ok(
+                CustomResponseEntity.builder()
+                        .statusCode(HttpStatus.OK.value())
+                        .message(LanguageUtil.translateMessage("OTP validated", LanguageUtil.resolveLang(httpRequest)))
+                        .build()
+        );
+    }
 
 
     @PostMapping("validate-token")

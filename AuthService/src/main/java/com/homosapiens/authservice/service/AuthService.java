@@ -20,7 +20,6 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
-import javax.swing.text.html.Option;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
@@ -46,6 +45,9 @@ public class AuthService {
     @Autowired
     private KafkaProducer kafkaProducer;
 
+    @Autowired
+    private OtpService otpService;
+
     public Object login(UserLoginDto loginDto) {
         User u = userRepository.findUserByEmail(loginDto.getEmail());
         if (u == null) {
@@ -54,6 +56,9 @@ public class AuthService {
 
         if (!passwordEncoder.matches(loginDto.getPassword(), u.getPassword())) {
             throw new AppException(HttpStatus.UNAUTHORIZED, "Email or password incorrect");
+        }
+        if (!u.isEmailVerified()) {
+            throw new AppException(HttpStatus.UNAUTHORIZED, "Email not verified");
         }
 
         CustomUserDetails customUserDetails = buildCustomUserDetails(u);
@@ -71,7 +76,9 @@ public class AuthService {
                 .orElseThrow(() -> new AppException(HttpStatus.NOT_FOUND, "Role not found"));
 
         User realUser = UserMapper.toEntity(user, role);
+        realUser.setEmailVerified(false);
         User saved = userRepository.save(realUser);
+        otpService.sendEmailVerificationOtp(saved, saved.getLang());
         sendUserEvent(KafkaEvent.USER_REGISTERED, saved, true);
         return saved;
     }
@@ -80,12 +87,15 @@ public class AuthService {
         User user = userRepository.findById(id)
                 .orElseThrow(() -> new AppException(HttpStatus.NOT_FOUND, "User not found"));
 
+        boolean emailChanged = false;
         if (updateDto.getEmail() != null && !updateDto.getEmail().equals(user.getEmail())) {
             User existingUser = userRepository.findUserByEmail(updateDto.getEmail());
             if (existingUser != null) {
                 throw new AppException(HttpStatus.CONFLICT, "Email already in use");
             }
             user.setEmail(updateDto.getEmail());
+            user.setEmailVerified(false);
+            emailChanged = true;
         }
 
         if (updateDto.getFirstName() != null) {
@@ -105,8 +115,19 @@ public class AuthService {
         }
 
         User saved = userRepository.save(user);
+        if (emailChanged) {
+            otpService.sendEmailVerificationOtp(saved, saved.getLang());
+        }
         sendUserEvent(KafkaEvent.USER_UPDATE, saved, true);
         return saved;
+    }
+
+    public void sendVerificationOtp(String email, String lang) {
+        otpService.sendEmailVerificationOtp(email, lang);
+    }
+
+    public void validateVerificationOtp(String email, String code) {
+        otpService.validateEmailOtp(email, code);
     }
 
     public void deleteUser(Long id) {

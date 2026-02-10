@@ -13,10 +13,16 @@ public class LanguageUtil {
         FR_MESSAGES.put("User not found", "Utilisateur introuvable");
         FR_MESSAGES.put("Email already in use", "Email déjà utilisé");
         FR_MESSAGES.put("Email or password incorrect", "Email ou mot de passe incorrect");
+        FR_MESSAGES.put("Email not verified", "Email non vérifié");
         FR_MESSAGES.put("Role not found", "Rôle introuvable");
         FR_MESSAGES.put("Refresh token is required", "Le jeton de rafraîchissement est requis");
         FR_MESSAGES.put("Invalid Authorization header format", "Format d'en-tête Authorization invalide");
         FR_MESSAGES.put("Missing Authorization header", "En-tête Authorization manquant");
+        FR_MESSAGES.put("OTP sent", "OTP envoyé");
+        FR_MESSAGES.put("OTP validated", "OTP validé");
+        FR_MESSAGES.put("OTP not found", "OTP introuvable");
+        FR_MESSAGES.put("OTP expired", "OTP expiré");
+        FR_MESSAGES.put("OTP invalid", "OTP invalide");
     }
 
     public static String resolveLang(HttpServletRequest request) {

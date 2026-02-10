@@ -46,6 +46,9 @@ public class User {
     @JsonProperty(access = JsonProperty.Access.WRITE_ONLY)
     private String password;
 
+    @Column(name = "email_verified", nullable = false)
+    private boolean emailVerified = false;
+
     @CreationTimestamp
     @Column(updatable = false, name = "created_at")
     private Date createdAt;
