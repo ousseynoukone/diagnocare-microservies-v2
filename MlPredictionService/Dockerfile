@@ -13,7 +13,12 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 # Copy application code
 COPY app.py .
-COPY nlp_service.py .
+COPY config/ ./config/
+COPY controllers/ ./controllers/
+COPY repositories/ ./repositories/
+COPY services/ ./services/
+COPY utils/ ./utils/
+COPY helper/ ./helper/
 COPY models/ ./models/
 COPY data/ ./data/
 
