@@ -4,15 +4,15 @@ services:
     container_name: auth-db
     environment:
       POSTGRES_DB: ${AUTH_DB_NAME:-auth_db}
-      POSTGRES_USER: ${DB_USERNAME}
-      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      POSTGRES_USER: ${AUTH_DB_USERNAME}
+      POSTGRES_PASSWORD: ${AUTH_DB_PASSWORD}
     # Internal only (do not expose in deployment)
-    # ports:
-    #   - "5432:5432"
+    ports:
+      - ${AUTH_DIAGNOCARE_DB_PORT}:5432
     volumes:
       - auth_postgres_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${DB_USERNAME} -d ${AUTH_DB_NAME:-auth_db}"]
+      test: ["CMD-SHELL", "pg_isready -U ${AUTH_DB_USERNAME} -d ${AUTH_DB_NAME:-auth_db}"]
       interval: 5s
       timeout: 5s
       retries: 5
@@ -26,7 +26,8 @@ services:
       POSTGRES_PASSWORD: ${DB_PASSWORD}
     # Internal only (do not expose in deployment)
     # ports:
-    #   - "5433:5432"
+    #   - ${DIAGNOCARE_DB_PORT}:5432
+
     volumes:
       - diagnocare_postgres_data:/var/lib/postgresql/data
     healthcheck:
