@@ -1,3 +1,8 @@
+# ML service generated artifacts
+MlPredictionService/models/*.joblib
+MlPredictionService/**/__pycache__/
+MlPredictionService/.DS_Store
+
 **/target/
 *.class
 
