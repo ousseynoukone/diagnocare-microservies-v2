@@ -1,18 +1,37 @@
 services:
-  postgres:
+  auth-postgres:
+    image: postgres:15
+    container_name: auth-db
+    environment:
+      POSTGRES_DB: ${AUTH_DB_NAME:-auth_db}
+      POSTGRES_USER: ${AUTH_DB_USERNAME}
+      POSTGRES_PASSWORD: ${AUTH_DB_PASSWORD}
+    # Internal only (do not expose in deployment)
+    ports:
+      - ${AUTH_DIAGNOCARE_DB_PORT}:5432
+    volumes:
+      - auth_postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${AUTH_DB_USERNAME} -d ${AUTH_DB_NAME:-auth_db}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  diagnocare-postgres:
     image: postgres:15
     container_name: diagnocare-db
     environment:
-      POSTGRES_DB: ${DB_NAME}
+      POSTGRES_DB: ${DIAGNOCARE_DB_NAME:-diagnocare_db}
       POSTGRES_USER: ${DB_USERNAME}
       POSTGRES_PASSWORD: ${DB_PASSWORD}
-    # TO COMMENT ON DEPLOYMENT
-    ports:
-      - "5432:5432"
+    # Internal only (do not expose in deployment)
+    # ports:
+    #   - ${DIAGNOCARE_DB_PORT}:5432
+
     volumes:
-      - postgres_data:/var/lib/postgresql/data
+      - diagnocare_postgres_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${DB_USERNAME} -d ${DB_NAME}"]
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USERNAME} -d ${DIAGNOCARE_DB_NAME:-diagnocare_db}"]
       interval: 5s
       timeout: 5s
       retries: 5
@@ -21,15 +40,17 @@ services:
     image: dpage/pgadmin4
     container_name: pgadmin4
     restart: always
-    ports:
-      - "8888:80"
+    # Optional admin UI; expose only if needed
+    # ports:
+    #   - "8888:80"
     environment:
       PGADMIN_DEFAULT_EMAIL: ${DB_USERNAME}@ok.com
       PGADMIN_DEFAULT_PASSWORD: ${DB_PASSWORD}
     volumes:
       - pgadmin_data:/var/lib/pgadmin
     depends_on:
-      - postgres
+      - auth-postgres
+      - diagnocare-postgres
 
   registry-service:
     build: ./RegistryService/.
@@ -42,15 +63,37 @@ services:
   auth-service:
     build: ./AuthService/.
     restart: always
+    # Optional direct access; otherwise route via gateway
     # ports:
-    #   - '8081:8081'
+    #   - '${AUTH_PORT:-8081}:8081'
     env_file:
       - .env
     environment:
-      - SPRING_DATASOURCE_URL=jdbc:postgresql://postgres:5432/${DB_NAME}
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://auth-postgres:5432/${AUTH_DB_NAME:-auth_db}
+      - KAFKA_BOOTSTRAP_SERVERS=kafka:9092
+      - SPRING_KAFKA_BOOTSTRAP_SERVERS=kafka:9092
       - eureka.client.serviceUrl.defaultZone=http://registry-service:8761/eureka/
     depends_on:
-      postgres:
+      auth-postgres:
+        condition: service_healthy
+      registry-service:
+        condition: service_started
+
+  diagnocare-service:
+    build: ./DiagnoCareService/.
+    restart: always
+    # ports:
+    #   - '8080:8080'
+    env_file:
+      - .env
+    environment:
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://diagnocare-postgres:5432/${DIAGNOCARE_DB_NAME:-diagnocare_db}
+      - KAFKA_BOOTSTRAP_SERVERS=kafka:9092
+      - SPRING_KAFKA_BOOTSTRAP_SERVERS=kafka:9092
+      - eureka.client.serviceUrl.defaultZone=http://registry-service:8761/eureka/
+      - ML_SERVICE_URL=http://ml-prediction-service:5000
+    depends_on:
+      diagnocare-postgres:
         condition: service_healthy
       registry-service:
         condition: service_started
@@ -66,15 +109,17 @@ services:
       - eureka.client.serviceUrl.defaultZone=http://registry-service:8761/eureka/
     depends_on:
       - auth-service
+      - diagnocare-service
 
   # Kafka setup using KRaft mode 
   kafka:
     image: apache/kafka:latest
     container_name: kafka-broker
     restart: always
-    ports:
-      - "9092:9092"      # Internal broker port
-      - "29092:29092"    # External access port
+    # Internal only; expose 29092 only if external clients need Kafka
+    # ports:
+    #   - "9092:9092"      # Internal broker port
+    #   - "29092:29092"    # External access port
     environment:
       # KRaft Configuration (Kafka without Zookeeper)
       KAFKA_NODE_ID: 1
@@ -137,7 +182,36 @@ services:
       kafka:
         condition: service_healthy
 
+  # ML Prediction Service (Flask)
+  ml-prediction-service:
+    build: ./MlPredictionService/.
+    container_name: ml-prediction-service
+    restart: always
+    # Optional direct access; otherwise call internally
+    # ports:
+    #   - "5000:5000"
+    environment:
+      - FLASK_ENV=production
+      - FLASK_APP=app.py
+      - SERVICE_NAME=ml-prediction-service
+      - EUREKA_SERVICE_URL=http://registry-service:8761
+      - EUREKA_SERVICE_PATH=eureka/apps
+      - EUREKA_INSTANCE_HOSTNAME=ml-prediction-service
+      - EUREKA_INSTANCE_PORT=5000
+    volumes:
+      - ./MlPredictionService/models:/app/models
+      - ./MlPredictionService/data:/app/data
+    healthcheck:
+      test: ["CMD", "python", "-c", "import requests; requests.get('http://localhost:5000/health')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    depends_on:
+      - kafka
+
 volumes:
-  postgres_data:
+  auth_postgres_data:
+  diagnocare_postgres_data:
   pgadmin_data:
   kafka_data:

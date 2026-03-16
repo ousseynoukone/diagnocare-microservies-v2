@@ -10,9 +10,6 @@ import java.time.LocalDateTime;
 public class FileSharing {
     @Id
     private String id;
-    private long sharedWithId;
     private String filePath;
     private LocalDateTime expirationDate;
-    private LocalDateTime sharedDate;
-    private String status;
 }

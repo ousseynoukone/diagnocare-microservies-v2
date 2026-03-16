@@ -11,7 +11,7 @@ import java.util.stream.Collectors;
 
 public class ValidationHelper {
 
-    public static ResponseEntity<CustomResponseEntity> buildValidationReponse(BindingResult bindingResult) {
+    public static ResponseEntity<CustomResponseEntity> buildValidationReponse(BindingResult bindingResult, String lang) {
 
         Map<String, String> errors = bindingResult.getFieldErrors().stream()
                 .collect(Collectors.toMap(
@@ -20,10 +20,11 @@ public class ValidationHelper {
                         (existing, replacement) -> existing
                 ));
 
+        String message = "en".equals(lang) ? "Validation failed" : "Validation échouée";
         CustomResponseEntity errorResponse = CustomResponseEntity.builder()
                 .statusCode(HttpStatus.BAD_REQUEST.value())
                 .data(errors)
-                .message("Validation failed")
+                .message(message)
                 .build();
 
         return ResponseEntity.badRequest().body(errorResponse);

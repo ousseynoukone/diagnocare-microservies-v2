@@ -72,15 +72,4 @@ public class UserServiceImpl implements UserService {
         return userRepository.findByPhoneNumber(phoneNumber);
     }
 
-    @Override
-    @Transactional(readOnly = true)
-    public Optional<User> getUserByStripeCustomerId(String stripeCustomerId) {
-        return userRepository.findByStripeCustomerId(stripeCustomerId);
-    }
-
-    @Override
-    @Transactional(readOnly = true)
-    public Optional<User> getUserByNpi(String npi) {
-        return userRepository.findByNpi(npi);
-    }
 } 

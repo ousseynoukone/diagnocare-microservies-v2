@@ -1,56 +1,34 @@
 package com.homosapiens.diagnocareservice.model.entity;
 
-import com.homosapiens.diagnocareservice.model.entity.appointment.Appointment;
 import jakarta.persistence.*;
 import lombok.Data;
-import org.hibernate.annotations.CreationTimestamp;
-import org.springframework.data.annotation.LastModifiedDate;
-import java.time.LocalDateTime;
-import java.util.Date;
+import lombok.EqualsAndHashCode;
 
+import java.time.LocalDateTime;
+
+@EqualsAndHashCode(callSuper = false)
 @Data
 @Entity
-@Table(name = "reports")
-public class Report {
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+@Table(name = "signalements")
+public class Report extends BaseEntity {
 
-    @Column(length = 254)
-    private String label;
+    @Column(name = "title", length = 200)
+    private String title;
 
-    @Column(length = 254)
-    private String diagnostic;
+    @Column(name = "comment", columnDefinition = "TEXT")
+    private String comment;
 
-    private LocalDateTime date;
+    @Column(name = "report_date")
+    private LocalDateTime reportDate;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "appointment_id")
-    private Appointment appointment;
-
-
-    @Column(length = 255)
-    private String reportType;
-    
-    @Column(length = 255)
-    private String reportStatus;
-    
-    @Column(length = 255)
-    private String reportFile;
+    @Column(name = "is_corrected")
+    private Boolean isCorrected = false;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "user_id")
+    @JoinColumn(name = "user_id", nullable = false)
     private User user;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "clinic_id")
-    private Clinic clinic;
-
-    @CreationTimestamp
-    @Column(updatable = false, name = "created_at")
-    private Date createdAt;
-
-    @LastModifiedDate
-    @Column(name = "updated_at")
-    private Date updatedAt;
+    @JoinColumn(name = "id_prediction")
+    private Prediction prediction;
 } 

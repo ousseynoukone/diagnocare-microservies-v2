@@ -1,0 +1,67 @@
+flowchart TB
+  %% Architecture globale — DiagnoCare
+  %% Disposition pour réduire les croisements
+  %% Rang 1: Client -> Passerelle
+  %% Rang 2: Services
+  %% Rang 3: Données / Registry / Assets
+  subgraph Client
+    Web["Frontend Web/Mobile"]
+  end
+
+  subgraph Gateway
+    APIGW["Passerelle API<br/>(Token + Routage)"]
+  end
+
+  subgraph Services
+    Auth["Service d’authentification<br/>(Spring Boot)"]
+    DiagnoCare["Service DiagnoCare<br/>(Spring Boot)"]
+    ML["Service de prédiction ML<br/>(Flask)"]
+  end
+
+  subgraph Datastores
+    AuthDB[("PostgreSQL<br/>Base Auth")]
+    DiagnoDB[("PostgreSQL<br/>Base DiagnoCare")]
+    Kafka[("Broker Kafka")]
+  end
+
+  subgraph Assets
+    MLModels[("Modèles ML + Traductions")]
+  end
+
+  subgraph Registry
+    Eureka["Service de registre<br/>(Eureka)"]
+  end
+
+  %% Client -> Gateway
+  Web --> APIGW
+
+  %% Service discovery
+  APIGW -. découverte .-> Eureka
+  Auth -. enregistrement .-> Eureka
+  DiagnoCare -. enregistrement .-> Eureka
+  ML -. enregistrement .-> Eureka
+
+  %% Core routes
+  APIGW --> Auth
+  APIGW --> DiagnoCare
+
+  %% Auth data
+  Auth --> AuthDB
+
+  %% DiagnoCare data + ML
+  DiagnoCare --> DiagnoDB
+  DiagnoCare --> ML
+
+  %% ML assets
+  ML --> MLModels
+
+  %% Events (optionnel selon usages)
+  Auth <--> Kafka
+  DiagnoCare <--> Kafka
+
+  %% Alignements
+  Client --- Gateway
+  Gateway --- Services
+  Services --- Datastores
+  Services --- Registry
+  Services --- Assets

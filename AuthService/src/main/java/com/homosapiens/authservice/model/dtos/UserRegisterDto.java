@@ -19,9 +19,10 @@ public class UserRegisterDto {
     @Size(min = 2, max = 50, message = "Last name must be between 2 and 50 characters")
     private String lastName;
 
-    @NotBlank(message = "Phone number must not be blank")
-    @Pattern(regexp = "\\+?[0-9]{7,15}", message = "Phone number must be valid")
+    @Pattern(regexp = "^$|\\+?[0-9]{7,15}", message = "Phone number must be valid")
     private String phoneNumber;
+
+    private String lang;
 
     @NotBlank(message = "Password must not be blank")
     @Size(min = 8, message = "Password must be at least 8 characters long")

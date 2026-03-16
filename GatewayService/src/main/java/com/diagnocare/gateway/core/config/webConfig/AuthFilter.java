@@ -45,6 +45,10 @@ public class AuthFilter extends AbstractGatewayFilterFactory<AuthFilter.Config> 
     @Override
     public GatewayFilter apply(Config config) {
         return (exchange, chain) -> {
+            String path = exchange.getRequest().getURI().getPath();
+            if (isSwaggerPath(path)) {
+                return chain.filter(exchange);
+            }
             if (!exchange.getRequest().getHeaders().containsKey(HttpHeaders.AUTHORIZATION)) {
                 return createErrorResponse(exchange, HttpStatus.UNAUTHORIZED, "Missing Authorization header");
             }
@@ -96,6 +100,7 @@ public class AuthFilter extends AbstractGatewayFilterFactory<AuthFilter.Config> 
                                 .header("x-auth-user-id", String.valueOf(userDto.getId()))
                                 .header("x-auth-user-email", userDto.getEmail())
                                 .header("x-auth-user-role", userDto.getRole())
+                                .header("x-auth-user-lang", userDto.getLang() != null ? userDto.getLang() : "fr")
                                 .build();
 
                         return chain.filter(exchange.mutate().request(mutatedRequest).build());
@@ -137,5 +142,14 @@ public class AuthFilter extends AbstractGatewayFilterFactory<AuthFilter.Config> 
 
     public static class Config {
         // Add config fields if needed later
+    }
+
+    private boolean isSwaggerPath(String path) {
+        if (path == null) {
+            return false;
+        }
+        return path.startsWith("/api/v1/diagnocare/swagger-ui")
+                || path.startsWith("/api/v1/diagnocare/v3/api-docs")
+                || path.startsWith("/api/v1/diagnocare/swagger-ui.html");
     }
 }

@@ -1,0 +1,276 @@
+%% DiagnoCare — Diagramme de classes UML
+%% Visibilité : + public, # protected, - private
+%% Relations : *-- composition (losange plein), o-- agrégation (losange vide), <|-- héritage
+%% Note : Mermaid utilise un layout automatique. Pour des traits strictement orthogonaux, utiliser PlantUML (voir class-diagram.puml).
+
+classDiagram
+  direction TB
+
+  %% ═══════════════════════════════════════════
+  %%  AUTH SERVICE
+  %% ═══════════════════════════════════════════
+  class UserAuth {
+    <<AuthService>>
+    +Long id
+    +String email
+    +String firstName
+    +String lastName
+    +String phoneNumber
+    +String lang
+    -String password
+    +boolean emailVerified
+    +Date createdAt
+    +Date updatedAt
+    +getFullName() String
+    +hasRole(RoleEnumAuth) boolean
+  }
+
+  class RoleAuth {
+    <<AuthService>>
+    +Integer id
+    +RoleEnumAuth name
+    +String description
+    +Date createdAt
+    +Date updatedAt
+    +getName() RoleEnumAuth
+  }
+
+  class Otp {
+    <<AuthService>>
+    +Long id
+    +String code
+    +Date createdAt
+    +Date expiresAt
+    +Date usedAt
+    +isExpired() boolean
+    +isUsed() boolean
+  }
+
+  class RoleEnumAuth {
+    <<enumeration>>
+    PATIENT
+    ADMIN
+    DOCTOR
+    OPERATOR
+    SUPER_ADMIN
+  }
+
+  UserAuth "1" o-- "*" RoleAuth : roles
+  Otp "*" --> "1" UserAuth : user
+  RoleAuth ..> RoleEnumAuth : name
+
+
+  %% ═══════════════════════════════════════════
+  %%  BASE ENTITÉ (héritage — champs protégés)
+  %% ═══════════════════════════════════════════
+  class BaseEntity {
+    <<abstract>>
+    #Long id
+    #LocalDateTime createdDate
+    #LocalDateTime updatedDate
+    +getId() Long
+    +getCreatedDate() LocalDateTime
+    +getUpdatedDate() LocalDateTime
+  }
+
+
+  %% ═══════════════════════════════════════════
+  %%  DIAGNOCARE — Agrégat User
+  %% ═══════════════════════════════════════════
+  class User {
+    <<DiagnoCareService>>
+    +String firstName
+    +String lastName
+    +LocalDate birthDate
+    +Boolean gender
+    +String email
+    +String address
+    +String phoneNumber
+    +String lang
+    +Boolean isActive
+    +getFullName() String
+    +getLang() String
+  }
+
+  class Role {
+    <<DiagnoCareService>>
+    +Integer id
+    +RoleEnumDcg name
+    +String description
+    +Date createdAt
+    +Date updatedAt
+    +getName() RoleEnumDcg
+  }
+
+  class PatientMedicalProfile {
+    <<DiagnoCareService>>
+    +Long id
+    +Boolean isSmoking
+    +int age
+    +GenderEnum gender
+    +Float weight
+    +Float meanBloodPressure
+    +Float meanCholesterol
+    +Boolean sedentary
+    +int bmi
+    +Boolean alcohol
+    +getBmi() int
+    +hasRiskFactors() boolean
+  }
+
+  class CheckIn {
+    <<DiagnoCareService>>
+    +CheckInStatus status
+    +CheckInOutcome outcome
+    +String worseReason
+    +LocalDateTime firstReminderAt
+    +LocalDateTime secondReminderAt
+    +LocalDateTime completedAt
+    +isCompleted() boolean
+    +getStatus() CheckInStatus
+  }
+
+  class Report {
+    <<DiagnoCareService>>
+    +String title
+    +String comment
+    +LocalDateTime reportDate
+    +Boolean isCorrected
+    +isCorrected() Boolean
+  }
+
+  class CheckInStatus {
+    <<enumeration>>
+    PENDING
+    SENT_24H
+    SENT_48H
+    COMPLETED
+  }
+
+  class CheckInOutcome {
+    <<enumeration>>
+    IMPROVING
+    STABLE
+    WORSENING
+  }
+
+  class GenderEnum {
+    <<enumeration>>
+    MALE
+    FEMALE
+  }
+
+  class RoleEnumDcg {
+    <<enumeration>>
+    PATIENT
+    ADMIN
+  }
+
+  BaseEntity <|-- User
+  BaseEntity <|-- CheckIn
+  BaseEntity <|-- Report
+
+  User "1" o-- "*" Role : roles
+  User "1" *-- "0..1" PatientMedicalProfile : profile
+  User "1" o-- "*" CheckIn : checkIns
+  User "1" o-- "*" Report : reports
+
+  Role ..> RoleEnumDcg : name
+  CheckIn ..> CheckInStatus : status
+  CheckIn ..> CheckInOutcome : outcome
+  PatientMedicalProfile ..> GenderEnum : gender
+
+
+  %% ═══════════════════════════════════════════
+  %%  DIAGNOCARE — Session symptômes & Prédictions
+  %% ═══════════════════════════════════════════
+  class SessionSymptom {
+    <<DiagnoCareService>>
+    +String rawDescription
+    +getSymptoms() List~Symptom~
+    +getPredictions() List~Prediction~
+  }
+
+  class Symptom {
+    <<DiagnoCareService>>
+    +String label
+    +Long symptomLabelId
+    +getLabel() String
+  }
+
+  class Prediction {
+    <<DiagnoCareService>>
+    +BigDecimal bestScore
+    +String pdfReportUrl
+    +Boolean isRedAlert
+    +String comment
+    +isRedAlert() Boolean
+    +getBestScore() BigDecimal
+    +getPathologyResults() List~PathologyResult~
+  }
+
+  class Pathology {
+    <<DiagnoCareService>>
+    +String pathologyName
+    +String description
+    +getPathologyName() String
+  }
+
+  class PathologyResult {
+    <<DiagnoCareService>>
+    +BigDecimal diseaseScore
+    +String description
+    +String localizedDiseaseName
+    +String localizedSpecialistLabel
+    +getDiseaseScore() BigDecimal
+    +getPathology() Pathology
+    +getDoctor() Doctor
+  }
+
+  class Doctor {
+    <<DiagnoCareService>>
+    +String specialistLabel
+    +BigDecimal specialistScore
+    +String description
+    +getSpecialistLabel() String
+  }
+
+  class UrgentDisease {
+    <<DiagnoCareService>>
+    +String diseaseName
+    +getDiseaseName() String
+  }
+
+  class AppSetting {
+    <<DiagnoCareService>>
+    +String settingKey
+    +String settingValue
+    +getValue() String
+  }
+
+  BaseEntity <|-- SessionSymptom
+  BaseEntity <|-- Symptom
+  BaseEntity <|-- Prediction
+  BaseEntity <|-- Pathology
+  BaseEntity <|-- PathologyResult
+  BaseEntity <|-- Doctor
+  BaseEntity <|-- UrgentDisease
+  BaseEntity <|-- AppSetting
+
+  User "1" *-- "*" SessionSymptom : sessionSymptom
+  SessionSymptom "1" o-- "*" Symptom : symptoms
+  SessionSymptom "1" *-- "*" Prediction : predictions
+
+  Prediction "0..1" --> "*" Prediction : previousPrediction
+  Prediction "1" *-- "*" PathologyResult : pathologyResults
+
+  PathologyResult "*" --> "1" Pathology : pathology
+  PathologyResult "*" --> "1" Doctor : doctor
+
+
+  %% ═══════════════════════════════════════════
+  %%  INTER-SERVICES (même identifiant)
+  %% ═══════════════════════════════════════════
+  UserAuth .. User : same id
+  note for UserAuth "id synchronisé vers User.id\n(Kafka: USER_REGISTERED,\nUSER_UPDATE, USER_DELETED)"
+  note for User "id = UserAuth.id"

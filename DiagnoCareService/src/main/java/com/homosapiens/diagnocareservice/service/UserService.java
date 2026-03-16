@@ -15,6 +15,4 @@ public interface UserService {
     List<User> getUsersByRole(RoleEnum role);
     boolean existsByEmail(String email);
     Optional<User> getUserByPhoneNumber(String phoneNumber);
-    Optional<User> getUserByStripeCustomerId(String stripeCustomerId);
-    Optional<User> getUserByNpi(String npi);
-} 
+}

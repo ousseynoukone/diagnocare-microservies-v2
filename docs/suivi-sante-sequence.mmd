@@ -1,0 +1,57 @@
+sequenceDiagram
+    title Suivi santé — Séquence
+
+    actor User as Utilisateur
+    participant Gateway as Gateway API
+    participant DiagnoCare as DiagnoCare Service
+    participant ML as Service ML
+    participant DB as Base de données
+
+    User ->> Gateway: POST /suivi-sante\n{userId, previousPredictionId, symptômes}
+    activate Gateway
+    Gateway ->> DiagnoCare: Transmettre la demande (API)
+    activate DiagnoCare
+
+    DiagnoCare ->> DB: Charger prediction précédente + utilisateur
+    activate DB
+    DB -->> DiagnoCare: OK | absent
+    deactivate DB
+
+    alt Prediction ou utilisateur introuvable
+        DiagnoCare -->> Gateway: 404 (prediction/utilisateur introuvable)
+        Gateway -->> User: 404
+    end
+
+    DiagnoCare ->> DiagnoCare: Valider appartenance prediction↔utilisateur
+    alt Incohérence
+        DiagnoCare -->> Gateway: 400 (prediction ne correspond pas)
+        Gateway -->> User: 400
+    end
+
+    DiagnoCare ->> ML: Prédire (symptômes + profil)
+    activate ML
+    ML -->> DiagnoCare: Résultats
+    deactivate ML
+
+    DiagnoCare ->> DiagnoCare: Comparer ancienne vs nouvelle prediction
+    Note right of DiagnoCare: Comparaison: delta = newBestScore - oldBestScore<br/>WORSENING si:<br/>- red flag OU<br/>- maladie urgente OU<br/>- delta >= seuil<br/>IMPROVING si delta <= -seuil<br/>STABLE sinon
+
+    alt Red flag / urgence / score↑
+        DiagnoCare ->> DiagnoCare: outcome = WORSENING
+    else Amélioration
+        DiagnoCare ->> DiagnoCare: outcome = IMPROVING
+    else Stable
+        DiagnoCare ->> DiagnoCare: outcome = STABLE
+    end
+
+    DiagnoCare ->> DB: Enregistrer session + prediction + résultats + suivi santé COMPLETED
+    activate DB
+    DB -->> DiagnoCare: OK
+    deactivate DB
+
+    DiagnoCare -->> Gateway: 201 + SuiviSanteResponse
+    deactivate DiagnoCare
+    Gateway -->> User: 201 + réponse
+    deactivate Gateway
+    destroy DiagnoCare
+    destroy Gateway

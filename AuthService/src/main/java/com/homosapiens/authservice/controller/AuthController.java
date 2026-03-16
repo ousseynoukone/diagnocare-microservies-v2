@@ -8,9 +8,15 @@ import com.homosapiens.authservice.model.User;
 import com.homosapiens.authservice.model.dtos.RefreshTokenRequest;
 import com.homosapiens.authservice.model.dtos.UserLoginDto;
 import com.homosapiens.authservice.model.dtos.UserRegisterDto;
+import com.homosapiens.authservice.model.dtos.UserUpdateDto;
+import com.homosapiens.authservice.model.dtos.OtpSendRequest;
+import com.homosapiens.authservice.model.dtos.OtpValidateRequest;
 import com.homosapiens.authservice.service.AuthService;
 import com.homosapiens.authservice.service.helpers.ValidationHelper;
+import com.homosapiens.authservice.core.locale.LanguageUtil;
+import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
@@ -20,21 +26,23 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.BindingResult;
 import org.springframework.web.bind.annotation.*;
+import jakarta.servlet.http.HttpServletRequest;
 
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
 @RestController
-
 @RequiredArgsConstructor
+@Tag(name = "Authentication", description = "Auth endpoints: login, register, tokens, and user sync")
 public class AuthController {
     private final AuthService authService;
 
     @PostMapping("login")
-    private ResponseEntity<?> login(@RequestBody @Valid UserLoginDto user , BindingResult bindingResult) {
+    @Operation(summary = "Login", description = "Authenticate user and return access + refresh tokens")
+    private ResponseEntity<?> login(@RequestBody @Valid UserLoginDto user , BindingResult bindingResult, HttpServletRequest request) {
         if (bindingResult.hasErrors()) {
-            return ValidationHelper.buildValidationReponse(bindingResult);
+            return ValidationHelper.buildValidationReponse(bindingResult, LanguageUtil.resolveLang(request));
         }
         if(user!=null){
                 Object response =  this.authService.login(user);
@@ -43,16 +51,17 @@ public class AuthController {
         return  ResponseEntity.status(HttpStatus.BAD_REQUEST).body(
                 CustomResponseEntity.builder()
                         .statusCode(HttpStatus.BAD_REQUEST.value())
-                        .message("All User informations are required"));
+                        .message(LanguageUtil.translateMessage("All User informations are required", LanguageUtil.resolveLang(request))));
     }
 
 
 
     @PostMapping("register")
-    private ResponseEntity<?> register(@RequestBody @Valid UserRegisterDto user , BindingResult bindingResult) {
+    @Operation(summary = "Register", description = "Create a new user account")
+    private ResponseEntity<?> register(@RequestBody @Valid UserRegisterDto user , BindingResult bindingResult, HttpServletRequest request) {
 
         if (bindingResult.hasErrors()) {
-            return ValidationHelper.buildValidationReponse(bindingResult);
+            return ValidationHelper.buildValidationReponse(bindingResult, LanguageUtil.resolveLang(request));
         }
 
         if(user!=null){
@@ -65,17 +74,39 @@ public class AuthController {
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(
                 CustomResponseEntity.builder()
                         .statusCode(HttpStatus.INTERNAL_SERVER_ERROR.value())
-                        .message("CHEEZ BRO , UR CODES ARE A MESS ! THIS IS SUCH A MASTERPIECE OF SHIT")
+                        .message(LanguageUtil.translateMessage("CHEEZ BRO , UR CODES ARE A MESS ! THIS IS SUCH A MASTERPIECE OF SHIT", LanguageUtil.resolveLang(request)))
         );
     }
 
+    @PutMapping("users/{id}")
+    @Operation(summary = "Update user", description = "Update user profile and sync to other services")
+    public ResponseEntity<?> updateUser(
+            @PathVariable Long id,
+            @RequestBody @Valid UserUpdateDto updateDto,
+            BindingResult bindingResult,
+            HttpServletRequest request) {
+        if (bindingResult.hasErrors()) {
+            return ValidationHelper.buildValidationReponse(bindingResult, LanguageUtil.resolveLang(request));
+        }
+        return ResponseEntity.ok(authService.updateUser(id, updateDto));
+    }
+
+    @DeleteMapping("users/{id}")
+    @Operation(summary = "Delete user", description = "Delete user account and sync deletion")
+    public ResponseEntity<?> deleteUser(@PathVariable Long id) {
+        authService.deleteUser(id);
+        return ResponseEntity.noContent().build();
+    }
+
     @PostMapping("refresh-token")
-    public ResponseEntity<?> refreshToken(@RequestBody RefreshTokenRequest request) {
+    @Operation(summary = "Refresh token", description = "Issue a new access token using a refresh token")
+    public ResponseEntity<?> refreshToken(@RequestBody RefreshTokenRequest request, HttpServletRequest servletRequest) {
         if (request.getRefreshToken() == null || request.getRefreshToken().isEmpty()) {
+            String lang = LanguageUtil.resolveLang(servletRequest);
             return ResponseEntity.badRequest().body(
                     CustomResponseEntity.builder()
                             .statusCode(HttpStatus.BAD_REQUEST.value())
-                            .message("Refresh token is required")
+                            .message(LanguageUtil.translateMessage("Refresh token is required", lang))
                             .build()
             );
         }
@@ -83,9 +114,40 @@ public class AuthController {
         return ResponseEntity.ok(authService.refreshToken(request.getRefreshToken()));
     }
 
+    @PostMapping("otp/send")
+    @Operation(summary = "Send OTP", description = "Send email verification OTP")
+    public ResponseEntity<?> sendOtp(@RequestBody @Valid OtpSendRequest request, BindingResult bindingResult, HttpServletRequest httpRequest) {
+        if (bindingResult.hasErrors()) {
+            return ValidationHelper.buildValidationReponse(bindingResult, LanguageUtil.resolveLang(httpRequest));
+        }
+        String lang = LanguageUtil.resolveLang(httpRequest);
+        authService.sendVerificationOtp(request.getEmail(), lang);
+        return ResponseEntity.ok(
+                CustomResponseEntity.builder()
+                        .statusCode(HttpStatus.OK.value())
+                        .message(LanguageUtil.translateMessage("OTP sent", lang))
+                        .build()
+        );
+    }
+
+    @PostMapping("otp/validate")
+    @Operation(summary = "Validate OTP", description = "Validate email verification OTP")
+    public ResponseEntity<?> validateOtp(@RequestBody @Valid OtpValidateRequest request, BindingResult bindingResult, HttpServletRequest httpRequest) {
+        if (bindingResult.hasErrors()) {
+            return ValidationHelper.buildValidationReponse(bindingResult, LanguageUtil.resolveLang(httpRequest));
+        }
+        authService.validateVerificationOtp(request.getEmail(), request.getCode());
+        return ResponseEntity.ok(
+                CustomResponseEntity.builder()
+                        .statusCode(HttpStatus.OK.value())
+                        .message(LanguageUtil.translateMessage("OTP validated", LanguageUtil.resolveLang(httpRequest)))
+                        .build()
+        );
+    }
 
 
     @PostMapping("validate-token")
+    @Operation(summary = "Validate token", description = "Validate access token and return user details")
     public ResponseEntity<?> validateToken(
             @Parameter(description = "Bearer token", required = true)
             @RequestHeader(name = HttpHeaders.AUTHORIZATION) String authorizationHeader) {

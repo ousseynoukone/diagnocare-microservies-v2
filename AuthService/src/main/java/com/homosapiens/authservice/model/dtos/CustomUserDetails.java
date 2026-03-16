@@ -20,4 +20,5 @@ public class CustomUserDetails   {
     private String email;
     private Long  id;
     private List<Role> roles;
+    private String lang;
 }

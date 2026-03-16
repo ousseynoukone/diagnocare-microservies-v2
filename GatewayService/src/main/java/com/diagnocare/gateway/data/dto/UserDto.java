@@ -10,6 +10,7 @@ public class UserDto {
     private String email;
     private String token;
     private String role;
+    private String lang;
 
     @Override
     public String toString() {
@@ -20,6 +21,7 @@ public class UserDto {
                 ", email='" + email + '\'' +
                 ", token='" + token + '\'' +
                 ", role='" + role + '\'' +
+                ", lang='" + lang + '\'' +
                 '}';
     }
 }
