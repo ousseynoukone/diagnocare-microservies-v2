@@ -32,6 +32,9 @@ public class User extends BaseEntity{
     @Convert(converter = EncryptedStringConverter.class)
     private String email;
 
+    @Column(name = "email_hash", unique = true, nullable = false, length = 64)
+    private String emailHash;
+
     @Column(length = 255)
     @Convert(converter = EncryptedStringConverter.class)
     private String address;
@@ -47,7 +50,8 @@ public class User extends BaseEntity{
 
     @PrePersist
     @PreUpdate
-    private void normalizeLang() {
+    private void normalizeFields() {
+        // Normalize lang
         if (lang == null || lang.trim().isEmpty()) {
             lang = "fr";
             return;
@@ -55,6 +59,13 @@ public class User extends BaseEntity{
         lang = lang.trim().toLowerCase();
         if (!lang.equals("fr") && !lang.equals("en")) {
             lang = "fr";
+        }
+
+        // Calculate email hash for uniqueness checks (before encryption)
+        // Note: This is done in the entity to ensure hash is always set before persistence
+        // For lookups, always use UserLookupService.findUserByEmail()
+        if (email != null && emailHash == null) {
+            emailHash = com.homosapiens.diagnocareservice.core.util.EmailHashUtil.calculateEmailHash(email);
         }
     }
 

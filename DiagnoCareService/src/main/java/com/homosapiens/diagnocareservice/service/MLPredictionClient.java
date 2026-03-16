@@ -8,6 +8,7 @@ import com.homosapiens.diagnocareservice.dto.MLTranslationRequestDTO;
 import com.homosapiens.diagnocareservice.dto.MLTranslationResponseDTO;
 import com.homosapiens.diagnocareservice.dto.MLSymptomExtractionRequestDTO;
 import com.homosapiens.diagnocareservice.dto.MLSymptomExtractionResponseDTO;
+import com.homosapiens.diagnocareservice.dto.MLFeaturesMetadataDTO;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
@@ -79,6 +80,33 @@ public class MLPredictionClient {
             log.error("Error calling ML translation service: {}", e.getMessage(), e);
             throw new AppException(HttpStatus.SERVICE_UNAVAILABLE,
                     "ML translation service is unavailable: " + e.getMessage());
+        }
+    }
+
+    public MLFeaturesMetadataDTO getFeaturesMetadata() {
+        try {
+            String url = mlServiceConfig.getMlServiceUrl() + "/features-metadata";
+            log.info("Calling ML features metadata service at: {}", url);
+
+            RestTemplate restTemplate = selectRestTemplate(url);
+            ResponseEntity<MLFeaturesMetadataDTO> response = restTemplate.getForEntity(
+                    url,
+                    MLFeaturesMetadataDTO.class
+            );
+
+            if (response.getStatusCode().is2xxSuccessful() && response.getBody() != null) {
+                log.info("ML features metadata retrieved successfully. Found {} symptoms", 
+                        response.getBody().getSymptoms() != null ? response.getBody().getSymptoms().getCount() : 0);
+                return response.getBody();
+            }
+
+            log.error("ML features metadata service returned non-success status: {}", response.getStatusCode());
+            throw new AppException(HttpStatus.INTERNAL_SERVER_ERROR,
+                    "ML features metadata service returned an error: " + response.getStatusCode());
+        } catch (RestClientException e) {
+            log.error("Error calling ML features metadata service: {}", e.getMessage(), e);
+            throw new AppException(HttpStatus.SERVICE_UNAVAILABLE,
+                    "ML service is unavailable: " + e.getMessage());
         }
     }
 

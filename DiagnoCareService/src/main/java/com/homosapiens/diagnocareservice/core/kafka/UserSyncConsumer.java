@@ -5,6 +5,7 @@ import com.homosapiens.diagnocareservice.dto.UserSyncEventDTO;
 import com.homosapiens.diagnocareservice.model.entity.User;
 import com.homosapiens.diagnocareservice.repository.UserRepository;
 import com.homosapiens.diagnocareservice.service.UserDataAnonymizationService;
+import com.homosapiens.diagnocareservice.service.UserLookupService;
 import lombok.RequiredArgsConstructor;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.springframework.kafka.annotation.KafkaListener;
@@ -17,6 +18,7 @@ import java.util.logging.Logger;
 public class UserSyncConsumer {
     private final ObjectMapper objectMapper;
     private final UserRepository userRepository;
+    private final UserLookupService userLookupService;
     private final UserDataAnonymizationService userDataAnonymizationService;
     private final Logger logger = Logger.getLogger(UserSyncConsumer.class.getName());
 
@@ -42,9 +44,9 @@ public class UserSyncConsumer {
             // Try to find user by ID first
             User user = userRepository.findById(event.getId()).orElse(null);
             
-            // If not found by ID, try to find by email (to avoid duplicate email constraint violation)
+            // If not found by ID, try to find by email using UserLookupService (handles encrypted email)
             if (user == null && event.getEmail() != null) {
-                user = userRepository.findByEmail(event.getEmail()).orElse(null);
+                user = userLookupService.findUserByEmail(event.getEmail()).orElse(null);
             }
             
             // If still not found, create a new user

@@ -69,7 +69,11 @@ class PredictionController:
                 return jsonify({"error": error_msg}), 400
             
             # Récupération des symptômes disponibles depuis le modèle
-            available_symptoms = list(self.model_repository.mlb.classes_)
+            mlb = self.model_repository.mlb
+            if mlb is None:
+                return jsonify({"error": "ML models are not loaded. Please ensure models are trained and available."}), 503
+            
+            available_symptoms = list(mlb.classes_)
             
             # Extraction des symptômes
             extracted_symptoms = self.nlp_service.extract_symptoms_from_text(

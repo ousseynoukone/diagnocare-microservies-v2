@@ -267,11 +267,13 @@ class ModelTrainer:
         )
         
         model = RandomForestClassifier(
-            n_estimators=200,
-            max_depth=15,
-            min_samples_split=10,
-            min_samples_leaf=5,
-            random_state=42
+            n_estimators=300,  # Augmenté pour plus de précision
+            max_depth=20,  # Augmenté pour capturer plus de patterns
+            min_samples_split=5,  # Réduit pour plus de flexibilité
+            min_samples_leaf=2,  # Réduit pour plus de sensibilité
+            class_weight='balanced',  # Équilibre les classes
+            random_state=42,
+            n_jobs=-1  # Utilise tous les CPU disponibles
         )
         model.fit(X_train, Y_train)
         

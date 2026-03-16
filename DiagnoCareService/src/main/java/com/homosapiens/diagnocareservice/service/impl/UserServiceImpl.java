@@ -3,6 +3,7 @@ package com.homosapiens.diagnocareservice.service.impl;
 import com.homosapiens.diagnocareservice.model.entity.User;
 import com.homosapiens.diagnocareservice.model.entity.enums.RoleEnum;
 import com.homosapiens.diagnocareservice.repository.UserRepository;
+import com.homosapiens.diagnocareservice.service.UserLookupService;
 import com.homosapiens.diagnocareservice.service.UserService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -17,6 +18,7 @@ import java.util.Optional;
 public class UserServiceImpl implements UserService {
 
     private final UserRepository userRepository;
+    private final UserLookupService userLookupService;
 
     @Override
     public User createUser(User user) {
@@ -46,7 +48,8 @@ public class UserServiceImpl implements UserService {
     @Override
     @Transactional(readOnly = true)
     public Optional<User> getUserByEmail(String email) {
-        return userRepository.findByEmail(email);
+        // Use UserLookupService to handle encrypted email lookup
+        return userLookupService.findUserByEmail(email);
     }
 
     @Override
@@ -63,7 +66,8 @@ public class UserServiceImpl implements UserService {
     @Override
     @Transactional(readOnly = true)
     public boolean existsByEmail(String email) {
-        return userRepository.existsByEmail(email);
+        // Use UserLookupService to handle encrypted email lookup
+        return userLookupService.existsByEmail(email);
     }
 
     @Override

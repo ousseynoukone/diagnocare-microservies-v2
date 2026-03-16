@@ -7,9 +7,6 @@ import jakarta.persistence.*;
 import jakarta.validation.constraints.*;
 import lombok.Data;
 
-import java.nio.charset.StandardCharsets;
-import java.security.MessageDigest;
-import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
@@ -43,7 +40,7 @@ public class User {
     @Size(min = 2, max = 50, message = "Last name must be between 2 and 50 characters")
     private String lastName;
 
-    @Pattern(regexp = "\\+?[0-9]{7,15}", message = "Phone number must be valid")
+    @Pattern(regexp = "^$|\\+?[0-9]{7,15}", message = "Phone number must be valid")
     @Convert(converter = EncryptedStringConverter.class)
     private String phoneNumber;
 
@@ -105,33 +102,17 @@ public class User {
                     .replace("-", "")
                     .replace("(", "")
                     .replace(")", "");
+            // Convert empty string to null (phone number is optional)
+            if (phoneNumber.isEmpty()) {
+                phoneNumber = null;
+            }
         }
 
         // Calculate email hash for uniqueness checks (before encryption)
+        // Note: This is done in the entity to ensure hash is always set before persistence
+        // For lookups, always use UserLookupService.findUserByEmail()
         if (email != null && emailHash == null) {
-            emailHash = calculateEmailHash(email);
-        }
-    }
-
-    /**
-     * Calculates SHA-256 hash of email for uniqueness checks.
-     * This allows checking email uniqueness even when email is encrypted.
-     */
-    private String calculateEmailHash(String email) {
-        try {
-            MessageDigest digest = MessageDigest.getInstance("SHA-256");
-            byte[] hash = digest.digest(email.toLowerCase().trim().getBytes(StandardCharsets.UTF_8));
-            StringBuilder hexString = new StringBuilder();
-            for (byte b : hash) {
-                String hex = Integer.toHexString(0xff & b);
-                if (hex.length() == 1) {
-                    hexString.append('0');
-                }
-                hexString.append(hex);
-            }
-            return hexString.toString();
-        } catch (NoSuchAlgorithmException e) {
-            throw new RuntimeException("SHA-256 algorithm not available", e);
+            emailHash = com.homosapiens.authservice.core.util.EmailHashUtil.calculateEmailHash(email);
         }
     }
 }

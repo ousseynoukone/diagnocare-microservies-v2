@@ -1,6 +1,6 @@
 package com.homosapiens.diagnocareservice.model.entity;
 
-import com.homosapiens.diagnocareservice.core.security.EncryptedFloatConverter;
+import com.homosapiens.diagnocareservice.core.security.*;
 import com.homosapiens.diagnocareservice.model.entity.enums.GenderEnum;
 import jakarta.persistence.*;
 import lombok.Data;
@@ -16,13 +16,15 @@ public class PatientMedicalProfile {
     private Long id;
 
     @Column
+    @Convert(converter = EncryptedBooleanConverter.class)
     private Boolean isSmoking;
 
     @Column
-    private int age;
+    @Convert(converter = EncryptedIntegerConverter.class)
+    private Integer age;
 
-    @Enumerated(EnumType.STRING)
-    @Column(length = 10)
+    @Column(length = 255)
+    @Convert(converter = EncryptedGenderEnumConverter.class)
     private GenderEnum gender;
 
     @Column
@@ -42,15 +44,19 @@ public class PatientMedicalProfile {
     private Float meanCholesterol;
 
     @Column
+    @Convert(converter = EncryptedBooleanConverter.class)
     private Boolean sedentary;
 
     @Column
-    private int bmi;
+    @Convert(converter = EncryptedIntegerConverter.class)
+    private Integer bmi;
 
     @Column
+    @Convert(converter = EncryptedBooleanConverter.class)
     private Boolean alcohol;
 
-    @ElementCollection(fetch = FetchType.EAGER)
+    @Column(columnDefinition = "TEXT")
+    @Convert(converter = EncryptedSetStringConverter.class)
     private Set<String> familyAntecedents;
 
 

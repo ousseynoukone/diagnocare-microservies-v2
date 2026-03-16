@@ -21,9 +21,25 @@ COPY utils/ ./utils/
 COPY helper/ ./helper/
 COPY models/ ./models/
 COPY data/ ./data/
+COPY training/ ./training/
+COPY train.py .
+COPY training/ ./training/
+COPY train.py .
 
 # Expose port
 EXPOSE 5000
+
+# Train models if they don't exist
+RUN mkdir -p /app/models && \
+    if [ ! -f /app/models/model.joblib ]; then \
+        echo "Training models..." && \
+        python train.py; \
+    else \
+        echo "Models already exist, skipping training."; \
+    fi
+
+# Create models directory if it doesn't exist
+RUN mkdir -p /app/models
 
 # Health check
 HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \

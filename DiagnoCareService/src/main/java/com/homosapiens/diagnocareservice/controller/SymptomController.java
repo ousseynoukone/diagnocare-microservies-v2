@@ -1,8 +1,10 @@
 package com.homosapiens.diagnocareservice.controller;
 
 import com.homosapiens.diagnocareservice.dto.SymptomDTO;
+import com.homosapiens.diagnocareservice.dto.MLFeaturesMetadataDTO;
 import com.homosapiens.diagnocareservice.model.entity.Symptom;
 import com.homosapiens.diagnocareservice.service.SymptomService;
+import com.homosapiens.diagnocareservice.service.MLPredictionClient;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -20,6 +22,7 @@ import java.util.List;
 public class SymptomController {
 
     private final SymptomService symptomService;
+    private final MLPredictionClient mlPredictionClient;
 
     @PostMapping
     @Operation(summary = "Create a new symptom", description = "Creates a new symptom in the system")
@@ -71,5 +74,12 @@ public class SymptomController {
             @Parameter(description = "Search term") @RequestParam String label) {
         List<Symptom> symptoms = symptomService.searchSymptomsByLabel(label);
         return ResponseEntity.ok(symptomService.convertToDTOList(symptoms));
+    }
+
+    @GetMapping("/ml-metadata")
+    @Operation(summary = "Get ML symptoms metadata", description = "Retrieves all symptoms from ML service with translations in French and English")
+    public ResponseEntity<MLFeaturesMetadataDTO> getMLSymptomsMetadata() {
+        MLFeaturesMetadataDTO metadata = mlPredictionClient.getFeaturesMetadata();
+        return ResponseEntity.ok(metadata);
     }
 }

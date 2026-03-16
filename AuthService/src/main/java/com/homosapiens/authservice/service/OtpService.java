@@ -5,6 +5,7 @@ import com.homosapiens.authservice.model.Otp;
 import com.homosapiens.authservice.model.User;
 import com.homosapiens.authservice.repository.OtpRepository;
 import com.homosapiens.authservice.repository.UserRepository;
+import com.homosapiens.authservice.service.UserLookupService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
@@ -17,12 +18,14 @@ import jakarta.mail.internet.MimeMessage;
 import java.security.SecureRandom;
 import java.util.Date;
 import java.util.List;
+import java.util.Optional;
 
 @Service
 @RequiredArgsConstructor
 public class OtpService {
     private final OtpRepository otpRepository;
     private final UserRepository userRepository;
+    private final UserLookupService userLookupService;
     private final JavaMailSender mailSender;
 
     @Value("${app.otp.expiration-minutes:10}")
@@ -58,20 +61,23 @@ public class OtpService {
 
     @Transactional
     public void sendEmailVerificationOtp(String email, String lang) {
-        User user = userRepository.findUserByEmail(email);
-        if (user == null) {
+        // Use UserLookupService to handle encrypted email lookup
+        Optional<User> userOpt = userLookupService.findUserByEmail(email);
+        if (userOpt.isEmpty()) {
             throw new AppException(HttpStatus.NOT_FOUND, "User not found");
         }
-        sendEmailVerificationOtp(user, lang);
+        sendEmailVerificationOtp(userOpt.get(), lang);
     }
 
     @Transactional
     public void validateEmailOtp(String email, String code) {
         cleanupExpiredOtps();
-        User user = userRepository.findUserByEmail(email);
-        if (user == null) {
+        // Use UserLookupService to handle encrypted email lookup
+        Optional<User> userOpt = userLookupService.findUserByEmail(email);
+        if (userOpt.isEmpty()) {
             throw new AppException(HttpStatus.NOT_FOUND, "User not found");
         }
+        User user = userOpt.get();
 
         Otp otp = otpRepository.findTopByUserAndUsedAtIsNullOrderByCreatedAtDesc(user)
                 .orElseThrow(() -> new AppException(HttpStatus.BAD_REQUEST, "OTP not found"));

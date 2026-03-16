@@ -3,6 +3,7 @@ package com.homosapiens.authservice.service;
 import com.homosapiens.authservice.core.exception.AppException;
 import com.homosapiens.authservice.core.kafka.KafkaProducer;
 import com.homosapiens.authservice.core.kafka.eventEnums.KafkaEvent;
+import com.homosapiens.authservice.core.util.EmailHashService;
 import com.homosapiens.authservice.core.webConfig.JWTAuthProvider;
 import com.homosapiens.authservice.model.Role;
 import com.homosapiens.authservice.model.User;
@@ -14,6 +15,7 @@ import com.homosapiens.authservice.model.dtos.UserUpdateDto;
 import com.homosapiens.authservice.model.mapper.UserMapper;
 import com.homosapiens.authservice.repository.RoleRepository;
 import com.homosapiens.authservice.repository.UserRepository;
+import com.homosapiens.authservice.service.UserLookupService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
@@ -21,9 +23,6 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
-import java.nio.charset.StandardCharsets;
-import java.security.MessageDigest;
-import java.security.NoSuchAlgorithmException;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
@@ -36,6 +35,12 @@ public class AuthService {
 
     @Autowired
     private UserRepository userRepository;
+
+    @Autowired
+    private UserLookupService userLookupService;
+
+    @Autowired
+    private EmailHashService emailHashService;
 
     @Autowired
     private PasswordEncoder passwordEncoder;
@@ -56,10 +61,12 @@ public class AuthService {
     private String consentVersion;
 
     public Object login(UserLoginDto loginDto) {
-        User u = userRepository.findUserByEmail(loginDto.getEmail());
-        if (u == null) {
+        // Use UserLookupService to handle encrypted email lookup
+        Optional<User> userOpt = userLookupService.findUserByEmail(loginDto.getEmail());
+        if (userOpt.isEmpty()) {
             throw new AppException(HttpStatus.NOT_FOUND, "User not found");
         }
+        User u = userOpt.get();
 
         if (!passwordEncoder.matches(loginDto.getPassword(), u.getPassword())) {
             throw new AppException(HttpStatus.UNAUTHORIZED, "Email or password incorrect");
@@ -81,10 +88,8 @@ public class AuthService {
             throw new AppException(HttpStatus.BAD_REQUEST, "Terms of service acceptance is required");
         }
 
-        // Check email uniqueness using hash (since email is encrypted, we use hash for uniqueness)
-        String emailHash = calculateEmailHash(user.getEmail());
-        Optional<User> existingUser = userRepository.findByEmailHash(emailHash);
-        if (existingUser.isPresent()) {
+        // Check email uniqueness using UserLookupService (handles encrypted email)
+        if (userLookupService.existsByEmail(user.getEmail())) {
             throw new AppException(HttpStatus.CONFLICT, "Email already in use");
         }
         user.setPassword(passwordEncoder.encode(user.getPassword()));
@@ -108,8 +113,9 @@ public class AuthService {
 
         boolean emailChanged = false;
         if (updateDto.getEmail() != null && !updateDto.getEmail().equals(user.getEmail())) {
-            User existingUser = userRepository.findUserByEmail(updateDto.getEmail());
-            if (existingUser != null) {
+            // Use UserLookupService to check uniqueness (handles encrypted email)
+            Optional<User> existingUserOpt = userLookupService.findUserByEmail(updateDto.getEmail());
+            if (existingUserOpt.isPresent() && !existingUserOpt.get().getId().equals(user.getId())) {
                 throw new AppException(HttpStatus.CONFLICT, "Email already in use");
             }
             user.setEmail(updateDto.getEmail());
@@ -167,11 +173,12 @@ public class AuthService {
         Map<String, Object> details = (Map<String, Object>) authentication.getPrincipal();
         String email = (String) details.get("email");
 
-
-        User u = userRepository.findUserByEmail(email);
-        if (u == null) {
+        // Use UserLookupService to handle encrypted email lookup
+        Optional<User> userOpt = userLookupService.findUserByEmail(email);
+        if (userOpt.isEmpty()) {
             throw new AppException(HttpStatus.NOT_FOUND, "User not found");
         }
+        User u = userOpt.get();
 
         CustomUserDetails customUserDetails = buildCustomUserDetails(u);
         return buildTokenResponse(customUserDetails, u);
@@ -215,25 +222,4 @@ public class AuthService {
         kafkaProducer.sendMessage(event.toString(), String.valueOf(user.getId()), payload);
     }
 
-    /**
-     * Calculates SHA-256 hash of email for uniqueness checks.
-     * This allows checking email uniqueness even when email is encrypted.
-     */
-    private String calculateEmailHash(String email) {
-        try {
-            MessageDigest digest = MessageDigest.getInstance("SHA-256");
-            byte[] hash = digest.digest(email.toLowerCase().trim().getBytes(StandardCharsets.UTF_8));
-            StringBuilder hexString = new StringBuilder();
-            for (byte b : hash) {
-                String hex = Integer.toHexString(0xff & b);
-                if (hex.length() == 1) {
-                    hexString.append('0');
-                }
-                hexString.append(hex);
-            }
-            return hexString.toString();
-        } catch (NoSuchAlgorithmException e) {
-            throw new RuntimeException("SHA-256 algorithm not available", e);
-        }
-    }
 }

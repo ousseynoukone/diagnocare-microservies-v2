@@ -50,12 +50,20 @@ class PredictionService:
         if not is_valid:
             raise ValueError(error_msg)
         
+        # Vérification que les modèles sont chargés
+        mlb = self.model_repository.mlb
+        if mlb is None:
+            raise ValueError("ML models are not loaded. Please ensure models are trained and available.")
+        
+        model = self.model_repository.model
+        if model is None:
+            raise ValueError("ML models are not loaded. Please ensure models are trained and available.")
+        
         # Nettoyage et validation des symptômes
         cleaned_symptoms = [
             self.text_utils.clean_text(s) 
             for s in request.symptoms
         ]
-        mlb = self.model_repository.mlb
         cleaned_symptoms = [
             s for s in cleaned_symptoms 
             if s in mlb.classes_
@@ -80,8 +88,7 @@ class PredictionService:
         # Combinaison de toutes les features
         df_final = self._combine_features(df_symptoms, df_numerical, df_categorical)
         
-        # Prédiction
-        model = self.model_repository.model
+        # Prédiction (model déjà vérifié plus haut)
         probs = model.predict_proba(df_final)
         disease_probs = probs[0][0]
         specialist_probs = probs[1][0]
@@ -120,23 +127,21 @@ class PredictionService:
                 language=request.language
             )
             
-            # Construction du résultat
+            # Construction du résultat avec les noms dans la langue demandée
             result = PredictionResult(
                 rank=i + 1,
-                disease=disease_name,
+                disease=disease_name_translated if request.language == 'fr' else disease_name,
                 probability=float(probability * 100),
-                specialist=specialist_name,
+                specialist=specialist_name_translated if request.language == 'fr' else specialist_name,
                 specialist_probability=float(specialist_prob * 100),
                 description=explanation
             )
             
-            # Ajout des traductions selon la langue
-            if request.language == 'fr':
-                result.disease_fr = disease_name_translated
-                result.specialist_fr = specialist_name_translated
-            else:
-                result.disease_en = disease_name_translated
-                result.specialist_en = specialist_name_translated
+            # Ajout des traductions dans les deux langues pour référence
+            result.disease_en = disease_name
+            result.specialist_en = specialist_name
+            result.disease_fr = disease_name_translated
+            result.specialist_fr = specialist_name_translated
             
             results.append(result)
         

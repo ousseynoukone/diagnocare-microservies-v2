@@ -14,6 +14,7 @@ import com.homosapiens.authservice.repository.RoleRepository;
 import com.homosapiens.authservice.repository.UserRepository;
 import com.homosapiens.authservice.service.AuthService;
 import com.homosapiens.authservice.service.OtpService;
+import com.homosapiens.authservice.service.UserLookupService;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -44,6 +45,9 @@ public class AuthServiceTest {
 
     @Mock
     private UserRepository userRepository;
+
+    @Mock
+    private UserLookupService userLookupService;
 
     @Mock
     private PasswordEncoder passwordEncoder;
@@ -87,7 +91,7 @@ public class AuthServiceTest {
         refreshToken.put("refreshToken", "refresh-token");
         refreshToken.put("validity", 7200L);
 
-        when(userRepository.findUserByEmail("john.doe@example.com")).thenReturn(user);
+        when(userLookupService.findUserByEmail("john.doe@example.com")).thenReturn(Optional.of(user));
         when(passwordEncoder.matches("plain-password", "encoded-password")).thenReturn(true);
         when(jwtAuthProvider.createToken(any(CustomUserDetails.class))).thenReturn(accessToken);
         when(jwtAuthProvider.createRefreshToken(any(CustomUserDetails.class))).thenReturn(refreshToken);
@@ -110,7 +114,7 @@ public class AuthServiceTest {
                 .password("any-password")
                 .build();
 
-        when(userRepository.findUserByEmail("missing@example.com")).thenReturn(null);
+        when(userLookupService.findUserByEmail("missing@example.com")).thenReturn(Optional.empty());
 
         // Act & Assert
         AppException exception = assertThrows(AppException.class, () -> authService.login(loginDto));
@@ -132,7 +136,7 @@ public class AuthServiceTest {
         user.setPassword("encoded-password");
         user.setEmailVerified(true);
 
-        when(userRepository.findUserByEmail("john.doe@example.com")).thenReturn(user);
+        when(userLookupService.findUserByEmail("john.doe@example.com")).thenReturn(Optional.of(user));
         when(passwordEncoder.matches("wrong-password", "encoded-password")).thenReturn(false);
 
         // Act & Assert
@@ -155,7 +159,7 @@ public class AuthServiceTest {
         user.setPassword("encoded-password");
         user.setEmailVerified(false);
 
-        when(userRepository.findUserByEmail("john.doe@example.com")).thenReturn(user);
+        when(userLookupService.findUserByEmail("john.doe@example.com")).thenReturn(Optional.of(user));
         when(passwordEncoder.matches("plain-password", "encoded-password")).thenReturn(true);
 
         // Act & Assert
@@ -187,7 +191,7 @@ public class AuthServiceTest {
         savedUser.setLastName("Doe");
         savedUser.setEmailVerified(false);
 
-        when(userRepository.findByEmailHash(anyString())).thenReturn(Optional.empty());
+        when(userLookupService.existsByEmail("newuser@example.com")).thenReturn(false);
         when(roleRepository.findById(1L)).thenReturn(Optional.of(role));
         when(passwordEncoder.encode("password123")).thenReturn("encoded-password");
         when(userRepository.save(any(User.class))).thenReturn(savedUser);
@@ -212,12 +216,7 @@ public class AuthServiceTest {
         registerDto.setPrivacyPolicyAccepted(true);
         registerDto.setTermsAccepted(true);
 
-        User existingUser = new User();
-        existingUser.setEmail("existing@example.com");
-        // Calculate email hash (same as in User entity)
-        String emailHash = calculateEmailHash("existing@example.com");
-
-        when(userRepository.findByEmailHash(emailHash)).thenReturn(Optional.of(existingUser));
+        when(userLookupService.existsByEmail("existing@example.com")).thenReturn(true);
 
         // Act & Assert
         AppException exception = assertThrows(AppException.class, () -> authService.register(registerDto));
@@ -237,7 +236,7 @@ public class AuthServiceTest {
         registerDto.setPrivacyPolicyAccepted(true);
         registerDto.setTermsAccepted(true);
 
-        when(userRepository.findByEmailHash(anyString())).thenReturn(Optional.empty());
+        when(userLookupService.existsByEmail("newuser@example.com")).thenReturn(false);
         when(roleRepository.findById(999L)).thenReturn(Optional.empty());
 
         // Act & Assert
@@ -311,7 +310,7 @@ public class AuthServiceTest {
         userWithTakenEmail.setEmail("taken@example.com");
 
         when(userRepository.findById(userId)).thenReturn(Optional.of(existingUser));
-        when(userRepository.findUserByEmail("taken@example.com")).thenReturn(userWithTakenEmail);
+        when(userLookupService.findUserByEmail("taken@example.com")).thenReturn(Optional.of(userWithTakenEmail));
 
         // Act & Assert
         AppException exception = assertThrows(AppException.class, () -> authService.updateUser(userId, updateDto));
@@ -375,7 +374,7 @@ public class AuthServiceTest {
         refreshTokenResponse.put("validity", 7200L);
 
         when(jwtAuthProvider.validateRefreshToken(refreshToken)).thenReturn(authentication);
-        when(userRepository.findUserByEmail(email)).thenReturn(user);
+        when(userLookupService.findUserByEmail(email)).thenReturn(Optional.of(user));
         when(jwtAuthProvider.createToken(any(CustomUserDetails.class))).thenReturn(accessToken);
         when(jwtAuthProvider.createRefreshToken(any(CustomUserDetails.class))).thenReturn(refreshTokenResponse);
 
@@ -401,7 +400,7 @@ public class AuthServiceTest {
         when(authentication.getPrincipal()).thenReturn(tokenDetails);
 
         when(jwtAuthProvider.validateRefreshToken(refreshToken)).thenReturn(authentication);
-        when(userRepository.findUserByEmail(email)).thenReturn(null);
+        when(userLookupService.findUserByEmail(email)).thenReturn(Optional.empty());
 
         // Act & Assert
         AppException exception = assertThrows(AppException.class, () -> authService.refreshToken(refreshToken));
@@ -410,23 +409,10 @@ public class AuthServiceTest {
     }
 
     /**
-     * Helper method to calculate SHA-256 hash of email (same as in User entity).
+     * Helper method to calculate SHA-256 hash of email.
+     * Uses EmailHashUtil to avoid code duplication.
      */
     private String calculateEmailHash(String email) {
-        try {
-            MessageDigest digest = MessageDigest.getInstance("SHA-256");
-            byte[] hash = digest.digest(email.toLowerCase().trim().getBytes(StandardCharsets.UTF_8));
-            StringBuilder hexString = new StringBuilder();
-            for (byte b : hash) {
-                String hex = Integer.toHexString(0xff & b);
-                if (hex.length() == 1) {
-                    hexString.append('0');
-                }
-                hexString.append(hex);
-            }
-            return hexString.toString();
-        } catch (NoSuchAlgorithmException e) {
-            throw new RuntimeException("SHA-256 algorithm not available", e);
-        }
+        return com.homosapiens.authservice.core.util.EmailHashUtil.calculateEmailHash(email);
     }
 }

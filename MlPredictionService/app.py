@@ -88,7 +88,17 @@ def create_app() -> Flask:
     
     # Chargement des modèles et traductions
     if not model_repository.load_all():
-        app.logger.error("Erreur lors du chargement des modèles. Veuillez exécuter train_model.py d'abord!")
+        app.logger.warning("Modèles non trouvés. Entraînement automatique des modèles...")
+        try:
+            from training.train_model import ModelTrainer
+            trainer = ModelTrainer(model_config)
+            trainer.train()
+            app.logger.info("Modèles entraînés avec succès. Rechargement...")
+            if not model_repository.load_all():
+                app.logger.error("Erreur lors du chargement des modèles après entraînement.")
+        except Exception as e:
+            app.logger.error(f"Erreur lors de l'entraînement automatique des modèles: {e}")
+            app.logger.error("Le service peut ne pas fonctionner correctement sans modèles entraînés.")
     
     if not translation_repository.load():
         app.logger.warning("Erreur lors du chargement des traductions. Utilisation de traductions vides.")

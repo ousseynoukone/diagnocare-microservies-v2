@@ -11,15 +11,15 @@ class PredictionResult:
     Résultat d'une prédiction individuelle (une maladie avec son spécialiste)
     """
     rank: int
-    disease: str  # Nom en anglais (original)
+    disease: str  # Nom dans la langue demandée (fr ou en)
     probability: float
-    specialist: str  # Nom en anglais (original)
+    specialist: str  # Nom dans la langue demandée (fr ou en)
     specialist_probability: float
     description: str
-    disease_fr: Optional[str] = None
-    specialist_fr: Optional[str] = None
-    disease_en: Optional[str] = None
-    specialist_en: Optional[str] = None
+    disease_fr: Optional[str] = None  # Nom en français (toujours disponible)
+    specialist_fr: Optional[str] = None  # Nom en français (toujours disponible)
+    disease_en: Optional[str] = None  # Nom en anglais (toujours disponible)
+    specialist_en: Optional[str] = None  # Nom en anglais (toujours disponible)
     
     def to_dict(self) -> dict:
         """Convertit en dictionnaire pour la réponse JSON"""
