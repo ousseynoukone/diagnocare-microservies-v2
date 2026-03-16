@@ -65,28 +65,25 @@ public class User {
 
     @PrePersist
     @PreUpdate
-    private void normalizeLang() {
+    private void normalizeFields() {
+        // Normalize lang
         if (lang == null || lang.trim().isEmpty()) {
             lang = "fr";
-            return;
+        } else {
+            lang = lang.trim().toLowerCase();
+            if (!lang.equals("fr") && !lang.equals("en")) {
+                lang = "fr";
+            }
         }
-        lang = lang.trim().toLowerCase();
-        if (!lang.equals("fr") && !lang.equals("en")) {
-            lang = "fr";
-        }
-    }
 
-    @PrePersist
-    @PreUpdate
-    private void normalizePhoneNumber() {
-        if (phoneNumber == null) {
-            return;
+        // Normalize phone number
+        if (phoneNumber != null) {
+            // Trim and remove common separators so validation is stable across clients (e.g. "04 20 37 13 30")
+            phoneNumber = phoneNumber.trim()
+                    .replace(" ", "")
+                    .replace("-", "")
+                    .replace("(", "")
+                    .replace(")", "");
         }
-        // Trim and remove common separators so validation is stable across clients (e.g. "04 20 37 13 30")
-        phoneNumber = phoneNumber.trim()
-                .replace(" ", "")
-                .replace("-", "")
-                .replace("(", "")
-                .replace(")", "");
     }
 }
