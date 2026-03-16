@@ -22,7 +22,10 @@ public class CheckInController {
     private final CheckInService checkInService;
 
     @PostMapping
-    @Operation(summary = "Submit a check-in and create a follow-up prediction")
+    @Operation(
+            summary = "Submit a check-in and create a follow-up prediction",
+            description = "Requires userId, previousPredictionId, and symptomLabels only (no symptomIds)."
+    )
     public ResponseEntity<CheckInResponseDTO> submitCheckIn(@Valid @RequestBody CheckInCreateRequestDTO requestDTO) {
         return ResponseEntity.status(HttpStatus.CREATED).body(checkInService.submitCheckIn(requestDTO));
     }

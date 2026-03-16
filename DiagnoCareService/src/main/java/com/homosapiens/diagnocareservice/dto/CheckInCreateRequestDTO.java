@@ -1,5 +1,6 @@
 package com.homosapiens.diagnocareservice.dto;
 
+import jakarta.validation.constraints.NotEmpty;
 import jakarta.validation.constraints.NotNull;
 import lombok.Data;
 
@@ -13,7 +14,6 @@ public class CheckInCreateRequestDTO {
     @NotNull(message = "Previous prediction ID is required")
     private Long previousPredictionId;
 
-    private List<Long> symptomIds;
-
+    @NotEmpty(message = "At least one symptom label is required")
     private List<String> symptomLabels;
 }

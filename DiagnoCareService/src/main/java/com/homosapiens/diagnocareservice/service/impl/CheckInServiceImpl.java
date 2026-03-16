@@ -81,7 +81,6 @@ public class CheckInServiceImpl implements CheckInService {
 
         SessionSymptomRequestDTO symptomRequestDTO = new SessionSymptomRequestDTO();
         symptomRequestDTO.setUserId(requestDTO.getUserId());
-        symptomRequestDTO.setSymptomIds(requestDTO.getSymptomIds());
         symptomRequestDTO.setSymptomLabels(requestDTO.getSymptomLabels());
 
         PredictionCreationResult result = predictionWorkflowService.createPrediction(symptomRequestDTO, previousPrediction.getId());
