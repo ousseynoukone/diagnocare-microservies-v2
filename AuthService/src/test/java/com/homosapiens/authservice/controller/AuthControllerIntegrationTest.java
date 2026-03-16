@@ -12,7 +12,7 @@ import org.springframework.test.web.servlet.MockMvc;
 import java.util.HashMap;
 import java.util.Map;
 
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -63,9 +63,197 @@ class AuthControllerIntegrationTest {
                 .accept(MediaType.APPLICATION_JSON)
 
         ).andExpect(status().is2xxSuccessful())
-                // Response wrapper returns data.email (not root email)
                 .andExpect(jsonPath("$.data.email").value("john.arc.raider@gmail.com"));
 
+    }
+
+    @Test
+    void register_ShouldReturnConflict_WhenEmailAlreadyExists() throws Exception {
+        // First register a user
+        Map<String, Object> firstPayload = new HashMap<>();
+        firstPayload.put("email", "duplicate@example.com");
+        firstPayload.put("firstName", "First");
+        firstPayload.put("lastName", "User");
+        firstPayload.put("phoneNumber", "+1234567890");
+        firstPayload.put("lang", "en");
+        firstPayload.put("password", "password123");
+        firstPayload.put("roleId", 1);
+
+        mockMvc.perform(post("/register")
+                .contentType(MediaType.APPLICATION_JSON)
+                .header("Accept-Language", "en")
+                .content(objectMapper.writeValueAsString(firstPayload)));
+
+        // Try to register again with same email
+        mockMvc.perform(post("/register")
+                .contentType(MediaType.APPLICATION_JSON)
+                .header("Accept-Language", "en")
+                .content(objectMapper.writeValueAsString(firstPayload)))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.statusCode").value(409))
+                .andExpect(jsonPath("$.message").value("Email already in use"));
+    }
+
+    @Test
+    void register_ShouldReturnBadRequest_WhenRequiredFieldsAreMissing() throws Exception {
+        Map<String, Object> payload = new HashMap<>();
+        payload.put("email", "incomplete@example.com");
+        // Missing firstName, lastName, password, roleId
+
+        mockMvc.perform(post("/register")
+                .contentType(MediaType.APPLICATION_JSON)
+                .header("Accept-Language", "en")
+                .content(objectMapper.writeValueAsString(payload)))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.statusCode").value(400));
+    }
+
+    @Test
+    void register_ShouldReturnBadRequest_WhenPhoneNumberIsInvalid() throws Exception {
+        Map<String, Object> payload = new HashMap<>();
+        payload.put("email", "test@example.com");
+        payload.put("firstName", "John");
+        payload.put("lastName", "Doe");
+        payload.put("phoneNumber", "invalid-phone"); // Invalid format
+        payload.put("lang", "en");
+        payload.put("password", "password123");
+        payload.put("roleId", 1);
+
+        mockMvc.perform(post("/register")
+                .contentType(MediaType.APPLICATION_JSON)
+                .header("Accept-Language", "en")
+                .content(objectMapper.writeValueAsString(payload)))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.statusCode").value(400));
+    }
+
+    @Test
+    void refreshToken_ShouldReturnBadRequest_WhenRefreshTokenIsMissing() throws Exception {
+        Map<String, Object> payload = new HashMap<>();
+        // Missing refreshToken field
+
+        mockMvc.perform(post("/refresh-token")
+                .contentType(MediaType.APPLICATION_JSON)
+                .header("Accept-Language", "en")
+                .content(objectMapper.writeValueAsString(payload)))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.statusCode").value(400))
+                .andExpect(jsonPath("$.message").value("Refresh token is required"));
+    }
+
+    @Test
+    void refreshToken_ShouldReturnBadRequest_WhenRefreshTokenIsEmpty() throws Exception {
+        Map<String, Object> payload = new HashMap<>();
+        payload.put("refreshToken", "");
+
+        mockMvc.perform(post("/refresh-token")
+                .contentType(MediaType.APPLICATION_JSON)
+                .header("Accept-Language", "en")
+                .content(objectMapper.writeValueAsString(payload)))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.statusCode").value(400))
+                .andExpect(jsonPath("$.message").value("Refresh token is required"));
+    }
+
+    @Test
+    void sendOtp_ShouldReturnBadRequest_WhenEmailIsMissing() throws Exception {
+        Map<String, Object> payload = new HashMap<>();
+        // Missing email
+
+        mockMvc.perform(post("/otp/send")
+                .contentType(MediaType.APPLICATION_JSON)
+                .header("Accept-Language", "en")
+                .content(objectMapper.writeValueAsString(payload)))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.statusCode").value(400));
+    }
+
+    @Test
+    void sendOtp_ShouldReturnBadRequest_WhenEmailIsInvalid() throws Exception {
+        Map<String, Object> payload = new HashMap<>();
+        payload.put("email", "not-an-email");
+
+        mockMvc.perform(post("/otp/send")
+                .contentType(MediaType.APPLICATION_JSON)
+                .header("Accept-Language", "en")
+                .content(objectMapper.writeValueAsString(payload)))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.statusCode").value(400));
+    }
+
+    @Test
+    void validateOtp_ShouldReturnBadRequest_WhenEmailIsMissing() throws Exception {
+        Map<String, Object> payload = new HashMap<>();
+        payload.put("code", "123456");
+
+        mockMvc.perform(post("/otp/validate")
+                .contentType(MediaType.APPLICATION_JSON)
+                .header("Accept-Language", "en")
+                .content(objectMapper.writeValueAsString(payload)))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.statusCode").value(400));
+    }
+
+    @Test
+    void validateOtp_ShouldReturnBadRequest_WhenCodeIsMissing() throws Exception {
+        Map<String, Object> payload = new HashMap<>();
+        payload.put("email", "test@example.com");
+
+        mockMvc.perform(post("/otp/validate")
+                .contentType(MediaType.APPLICATION_JSON)
+                .header("Accept-Language", "en")
+                .content(objectMapper.writeValueAsString(payload)))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.statusCode").value(400));
+    }
+
+    @Test
+    void updateUser_ShouldReturnNotFound_WhenUserDoesNotExist() throws Exception {
+        Map<String, Object> payload = new HashMap<>();
+        payload.put("firstName", "Updated");
+
+        mockMvc.perform(put("/users/99999")
+                .contentType(MediaType.APPLICATION_JSON)
+                .header("Accept-Language", "en")
+                .content(objectMapper.writeValueAsString(payload)))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.statusCode").value(404))
+                .andExpect(jsonPath("$.message").value("User not found"));
+    }
+
+    @Test
+    void updateUser_ShouldReturnBadRequest_WhenValidationFails() throws Exception {
+        Map<String, Object> payload = new HashMap<>();
+        payload.put("firstName", "A"); // Too short (min 2 characters)
+
+        mockMvc.perform(put("/users/1")
+                .contentType(MediaType.APPLICATION_JSON)
+                .header("Accept-Language", "en")
+                .content(objectMapper.writeValueAsString(payload)))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.statusCode").value(400));
+    }
+
+    @Test
+    void deleteUser_ShouldReturnNotFound_WhenUserDoesNotExist() throws Exception {
+        mockMvc.perform(delete("/users/99999")
+                .header("Accept-Language", "en"))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.statusCode").value(404))
+                .andExpect(jsonPath("$.message").value("User not found"));
+    }
+
+    @Test
+    void validateToken_ShouldReturnUnauthorized_WhenTokenIsMissing() throws Exception {
+        mockMvc.perform(post("/validate-token"))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void validateToken_ShouldReturnUnauthorized_WhenTokenIsInvalid() throws Exception {
+        mockMvc.perform(post("/validate-token")
+                .header("Authorization", "Bearer invalid-token"))
+                .andExpect(status().isUnauthorized());
     }
 }
 
