@@ -1,0 +1,46 @@
+{
+  "info": {
+    "name": "DiagnoCare - Prediction with Medical Profile",
+    "description": "1) Create/update medical profile for a user. 2) Run prediction (uses that profile if same userId).",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "baseUrl", "value": "http://localhost:8765" },
+    { "key": "token", "value": "YOUR_JWT_ACCESS_TOKEN" },
+    { "key": "userId", "value": "8" }
+  ],
+  "item": [
+    {
+      "name": "1. Create or update medical profile",
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" },
+          { "key": "Authorization", "value": "Bearer {{token}}" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"userId\": {{userId}},\n  \"age\": 52,\n  \"gender\": \"MALE\",\n  \"weight\": 82.0,\n  \"bmi\": 26,\n  \"meanBloodPressure\": 128.0,\n  \"meanCholesterol\": 205.0,\n  \"isSmoking\": false,\n  \"alcohol\": false,\n  \"sedentary\": true,\n  \"familyAntecedents\": [\"Hypertension\", \"Diabetes\"]\n}"
+        },
+        "url": "{{baseUrl}}/api/v1/diagnocare/patient-profiles",
+        "description": "Creates or updates the medical profile for the user. Use the same userId in the prediction request so the ML uses this profile."
+      }
+    },
+    {
+      "name": "2. Run prediction (with profile)",
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" },
+          { "key": "Authorization", "value": "Bearer {{token}}" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"userId\": {{userId}},\n  \"symptomLabels\": [\n    \"chest_pain\",\n    \"breathlessness\",\n    \"sweating\",\n    \"fatigue\",\n    \"dizziness\",\n    \"palpitations\"\n  ]\n}"
+        },
+        "url": "{{baseUrl}}/api/v1/diagnocare/predictions",
+        "description": "Runs prediction for the user. If a medical profile exists for this userId, it is sent to the ML service; otherwise defaults are used."
+      }
+    }
+  ]
+}

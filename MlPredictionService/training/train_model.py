@@ -186,13 +186,13 @@ class ModelTrainer:
         symptom_cols = [c for c in df.columns if 'Symptom' in c]
         print(f"   - {len(symptom_cols)} colonnes de symptômes trouvées")
         
-        print("\n2. Traitement des symptômes...")
+        print("\n2. Traitement des symptômes (nettoyage des libellés)...")
         symptom_lists = []
         for _, row in df.iterrows():
             cleaned = [
-                self.text_utils.clean_text(row[col]) 
-                for col in symptom_cols 
-                if pd.notna(row[col])
+                self.text_utils.clean_text(str(row[col]).strip())
+                for col in symptom_cols
+                if pd.notna(row[col]) and str(row[col]).strip()
             ]
             symptom_lists.append([s for s in cleaned if s])
         
@@ -260,29 +260,42 @@ class ModelTrainer:
         Y_combined = np.column_stack((y_disease, y_specialist))
         
         print(f"   - Forme finale des features: {df_features.shape}")
-        
-        print("\n6. Entraînement du modèle...")
+
+        print("\n6. Entraînement du modèle (split stratifié par maladie)...")
+        # Stratified split by disease so train/test have similar class distribution
+        y_disease_only = df['Disease'].values
         X_train, X_test, Y_train, Y_test = train_test_split(
-            df_features, Y_combined, test_size=0.2, random_state=42
+            df_features, Y_combined, test_size=0.2, random_state=42, stratify=y_disease_only
         )
-        
+
         model = RandomForestClassifier(
-            n_estimators=300,  # Augmenté pour plus de précision
-            max_depth=20,  # Augmenté pour capturer plus de patterns
-            min_samples_split=5,  # Réduit pour plus de flexibilité
-            min_samples_leaf=2,  # Réduit pour plus de sensibilité
-            class_weight='balanced',  # Équilibre les classes
+            n_estimators=300,
+            max_depth=20,
+            min_samples_split=5,
+            min_samples_leaf=2,
+            class_weight='balanced',
             random_state=42,
-            n_jobs=-1  # Utilise tous les CPU disponibles
+            n_jobs=-1
         )
         model.fit(X_train, Y_train)
-        
-        # Évaluation rapide
+
+        # Évaluation: top-1 et top-k (plus pertinent pour la prédiction médicale)
         Y_pred = model.predict(X_test)
-        acc_disease = accuracy_score(Y_test[:, 0], Y_pred[:, 0])
-        acc_specialist = accuracy_score(Y_test[:, 1], Y_pred[:, 1])
-        print(f"   - Précision Maladie: {acc_disease*100:.2f}%")
-        print(f"   - Précision Spécialiste: {acc_specialist*100:.2f}%")
+        acc_disease_top1 = accuracy_score(Y_test[:, 0], Y_pred[:, 0])
+        acc_specialist_top1 = accuracy_score(Y_test[:, 1], Y_pred[:, 1])
+        print(f"   - Précision Maladie (top-1):     {acc_disease_top1*100:.2f}%")
+        print(f"   - Précision Spécialiste (top-1): {acc_specialist_top1*100:.2f}%")
+
+        # Top-k accuracy for disease (is true label in top k predictions?)
+        probs_disease = model.predict_proba(X_test)[0]  # (n_test, n_diseases)
+        n_test = Y_test.shape[0]
+        for k in [3, 5]:
+            top_k_correct = 0
+            for i in range(n_test):
+                top_k_idx = np.argsort(probs_disease[i])[-k:][::-1]
+                if Y_test[i, 0] in top_k_idx:
+                    top_k_correct += 1
+            print(f"   - Précision Maladie (top-{k}):     {100*top_k_correct/n_test:.2f}%")
         
         print("\n7. Sauvegarde des artefacts...")
         os.makedirs(self.config.MODELS_DIR, exist_ok=True)
