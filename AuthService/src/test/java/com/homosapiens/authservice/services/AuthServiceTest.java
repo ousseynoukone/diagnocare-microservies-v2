@@ -9,6 +9,7 @@ import com.homosapiens.authservice.model.dtos.CustomUserDetails;
 import com.homosapiens.authservice.model.dtos.UserLoginDto;
 import com.homosapiens.authservice.model.dtos.UserRegisterDto;
 import com.homosapiens.authservice.model.dtos.UserUpdateDto;
+import com.homosapiens.authservice.model.enums.RoleEnum;
 import com.homosapiens.authservice.repository.RoleRepository;
 import com.homosapiens.authservice.repository.UserRepository;
 import com.homosapiens.authservice.service.AuthService;
@@ -19,6 +20,7 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.http.HttpStatus;
+import org.springframework.security.core.Authentication;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
 import java.util.Collections;
@@ -169,8 +171,8 @@ public class AuthServiceTest {
         registerDto.setRoleId(1L);
 
         Role role = new Role();
-        role.setId(1L);
-        role.setName("PATIENT");
+        role.setId(1);
+        role.setName(RoleEnum.ADMIN);
 
         User savedUser = new User();
         savedUser.setId(1L);
