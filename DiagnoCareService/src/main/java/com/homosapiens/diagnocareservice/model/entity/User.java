@@ -1,5 +1,6 @@
 package com.homosapiens.diagnocareservice.model.entity;
 
+import com.homosapiens.diagnocareservice.core.security.EncryptedStringConverter;
 import jakarta.persistence.*;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
@@ -28,12 +29,15 @@ public class User extends BaseEntity{
     private Boolean gender;
 
     @Column(length = 255, unique = true)
+    @Convert(converter = EncryptedStringConverter.class)
     private String email;
 
     @Column(length = 255)
+    @Convert(converter = EncryptedStringConverter.class)
     private String address;
 
     @Column(length = 13)
+    @Convert(converter = EncryptedStringConverter.class)
     private String phoneNumber;
 
     @Column(length = 5)

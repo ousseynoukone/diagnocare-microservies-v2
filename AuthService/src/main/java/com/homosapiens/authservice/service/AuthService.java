@@ -15,11 +15,15 @@ import com.homosapiens.authservice.model.mapper.UserMapper;
 import com.homosapiens.authservice.repository.RoleRepository;
 import com.homosapiens.authservice.repository.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
@@ -48,6 +52,9 @@ public class AuthService {
     @Autowired
     private OtpService otpService;
 
+    @Value("${app.consent.version:v1.0-2024}")
+    private String consentVersion;
+
     public Object login(UserLoginDto loginDto) {
         User u = userRepository.findUserByEmail(loginDto.getEmail());
         if (u == null) {
@@ -66,8 +73,18 @@ public class AuthService {
     }
 
     public User register(UserRegisterDto user) {
-        User existingUser = userRepository.findUserByEmail(user.getEmail());
-        if (existingUser != null) {
+        // Validate consent acceptance
+        if (user.getPrivacyPolicyAccepted() == null || !user.getPrivacyPolicyAccepted()) {
+            throw new AppException(HttpStatus.BAD_REQUEST, "Privacy policy acceptance is required");
+        }
+        if (user.getTermsAccepted() == null || !user.getTermsAccepted()) {
+            throw new AppException(HttpStatus.BAD_REQUEST, "Terms of service acceptance is required");
+        }
+
+        // Check email uniqueness using hash (since email is encrypted, we use hash for uniqueness)
+        String emailHash = calculateEmailHash(user.getEmail());
+        Optional<User> existingUser = userRepository.findByEmailHash(emailHash);
+        if (existingUser.isPresent()) {
             throw new AppException(HttpStatus.CONFLICT, "Email already in use");
         }
         user.setPassword(passwordEncoder.encode(user.getPassword()));
@@ -77,6 +94,8 @@ public class AuthService {
 
         User realUser = UserMapper.toEntity(user, role);
         realUser.setEmailVerified(false);
+        realUser.setConsentDate(new Date());
+        realUser.setConsentVersion(consentVersion);
         User saved = userRepository.save(realUser);
         otpService.sendEmailVerificationOtp(saved, saved.getLang());
         sendUserEvent(KafkaEvent.USER_REGISTERED, saved, true);
@@ -194,5 +213,27 @@ public class AuthService {
                 .active(active)
                 .build();
         kafkaProducer.sendMessage(event.toString(), String.valueOf(user.getId()), payload);
+    }
+
+    /**
+     * Calculates SHA-256 hash of email for uniqueness checks.
+     * This allows checking email uniqueness even when email is encrypted.
+     */
+    private String calculateEmailHash(String email) {
+        try {
+            MessageDigest digest = MessageDigest.getInstance("SHA-256");
+            byte[] hash = digest.digest(email.toLowerCase().trim().getBytes(StandardCharsets.UTF_8));
+            StringBuilder hexString = new StringBuilder();
+            for (byte b : hash) {
+                String hex = Integer.toHexString(0xff & b);
+                if (hex.length() == 1) {
+                    hexString.append('0');
+                }
+                hexString.append(hex);
+            }
+            return hexString.toString();
+        } catch (NoSuchAlgorithmException e) {
+            throw new RuntimeException("SHA-256 algorithm not available", e);
+        }
     }
 }

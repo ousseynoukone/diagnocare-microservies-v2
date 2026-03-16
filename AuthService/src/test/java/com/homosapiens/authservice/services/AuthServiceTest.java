@@ -23,6 +23,9 @@ import org.springframework.http.HttpStatus;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
@@ -32,6 +35,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -169,6 +173,8 @@ public class AuthServiceTest {
         registerDto.setLastName("Doe");
         registerDto.setPassword("password123");
         registerDto.setRoleId(1L);
+        registerDto.setPrivacyPolicyAccepted(true);
+        registerDto.setTermsAccepted(true);
 
         Role role = new Role();
         role.setId(1);
@@ -181,7 +187,7 @@ public class AuthServiceTest {
         savedUser.setLastName("Doe");
         savedUser.setEmailVerified(false);
 
-        when(userRepository.findUserByEmail("newuser@example.com")).thenReturn(null);
+        when(userRepository.findByEmailHash(anyString())).thenReturn(Optional.empty());
         when(roleRepository.findById(1L)).thenReturn(Optional.of(role));
         when(passwordEncoder.encode("password123")).thenReturn("encoded-password");
         when(userRepository.save(any(User.class))).thenReturn(savedUser);
@@ -203,11 +209,15 @@ public class AuthServiceTest {
         registerDto.setLastName("Doe");
         registerDto.setPassword("password123");
         registerDto.setRoleId(1L);
+        registerDto.setPrivacyPolicyAccepted(true);
+        registerDto.setTermsAccepted(true);
 
         User existingUser = new User();
         existingUser.setEmail("existing@example.com");
+        // Calculate email hash (same as in User entity)
+        String emailHash = calculateEmailHash("existing@example.com");
 
-        when(userRepository.findUserByEmail("existing@example.com")).thenReturn(existingUser);
+        when(userRepository.findByEmailHash(emailHash)).thenReturn(Optional.of(existingUser));
 
         // Act & Assert
         AppException exception = assertThrows(AppException.class, () -> authService.register(registerDto));
@@ -224,8 +234,10 @@ public class AuthServiceTest {
         registerDto.setLastName("Doe");
         registerDto.setPassword("password123");
         registerDto.setRoleId(999L);
+        registerDto.setPrivacyPolicyAccepted(true);
+        registerDto.setTermsAccepted(true);
 
-        when(userRepository.findUserByEmail("newuser@example.com")).thenReturn(null);
+        when(userRepository.findByEmailHash(anyString())).thenReturn(Optional.empty());
         when(roleRepository.findById(999L)).thenReturn(Optional.empty());
 
         // Act & Assert
@@ -395,5 +407,26 @@ public class AuthServiceTest {
         AppException exception = assertThrows(AppException.class, () -> authService.refreshToken(refreshToken));
         assertEquals(HttpStatus.NOT_FOUND, exception.getStatus());
         assertEquals("User not found", exception.getMessage());
+    }
+
+    /**
+     * Helper method to calculate SHA-256 hash of email (same as in User entity).
+     */
+    private String calculateEmailHash(String email) {
+        try {
+            MessageDigest digest = MessageDigest.getInstance("SHA-256");
+            byte[] hash = digest.digest(email.toLowerCase().trim().getBytes(StandardCharsets.UTF_8));
+            StringBuilder hexString = new StringBuilder();
+            for (byte b : hash) {
+                String hex = Integer.toHexString(0xff & b);
+                if (hex.length() == 1) {
+                    hexString.append('0');
+                }
+                hexString.append(hex);
+            }
+            return hexString.toString();
+        } catch (NoSuchAlgorithmException e) {
+            throw new RuntimeException("SHA-256 algorithm not available", e);
+        }
     }
 }

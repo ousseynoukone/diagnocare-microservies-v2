@@ -1,5 +1,6 @@
 package com.homosapiens.diagnocareservice.model.entity;
 
+import com.homosapiens.diagnocareservice.core.security.EncryptedFloatConverter;
 import com.homosapiens.diagnocareservice.model.entity.enums.GenderEnum;
 import jakarta.persistence.*;
 import lombok.Data;
@@ -25,6 +26,7 @@ public class PatientMedicalProfile {
     private GenderEnum gender;
 
     @Column
+    @Convert(converter = EncryptedFloatConverter.class)
     private Float weight;
 
     @OneToOne(fetch = FetchType.LAZY)
@@ -32,9 +34,11 @@ public class PatientMedicalProfile {
     private User user;
 
     @Column(nullable = true , name = "mean_bp")
+    @Convert(converter = EncryptedFloatConverter.class)
     private Float meanBloodPressure;
 
     @Column(nullable = true , name = "mean_chol")
+    @Convert(converter = EncryptedFloatConverter.class)
     private Float meanCholesterol;
 
     @Column

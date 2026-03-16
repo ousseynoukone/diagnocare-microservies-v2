@@ -6,6 +6,7 @@ import com.homosapiens.authservice.model.Role;
 import com.homosapiens.authservice.model.dtos.UserRegisterDto;
 
 import java.util.Collections;
+import java.util.Date;
 
 public class UserMapper {
 
@@ -18,6 +19,8 @@ public class UserMapper {
         user.setPhoneNumber(dto.getPhoneNumber());
         user.setPassword(dto.getPassword());
         user.setLang(dto.getLang());
+        user.setPrivacyPolicyAccepted(dto.getPrivacyPolicyAccepted());
+        user.setTermsAccepted(dto.getTermsAccepted());
 
         if (role != null) {
             user.setRoles(Collections.singletonList(role));

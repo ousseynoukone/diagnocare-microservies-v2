@@ -94,6 +94,8 @@ class AuthControllerIntegrationTest {
         payload.put("lang", "string");
         payload.put("password", "stringst");
         payload.put("roleId", 1);
+        payload.put("privacyPolicyAccepted", true);
+        payload.put("termsAccepted", true);
 
         mockMvc.perform( post("/register")
                 .contentType(MediaType.APPLICATION_JSON)
@@ -117,13 +119,18 @@ class AuthControllerIntegrationTest {
         firstPayload.put("lang", "en");
         firstPayload.put("password", "password123");
         firstPayload.put("roleId", 1);
+        firstPayload.put("privacyPolicyAccepted", true);
+        firstPayload.put("termsAccepted", true);
 
         mockMvc.perform(post("/register")
                 .contentType(MediaType.APPLICATION_JSON)
                 .header("Accept-Language", "en")
-                .content(objectMapper.writeValueAsString(firstPayload)));
+                .content(objectMapper.writeValueAsString(firstPayload)))
+                .andExpect(status().isCreated());
 
         // Try to register again with same email
+        // Note: Email uniqueness check happens before encryption in service layer
+        // The check queries with plain text email, which should work if repository decrypts on read
         mockMvc.perform(post("/register")
                 .contentType(MediaType.APPLICATION_JSON)
                 .header("Accept-Language", "en")
@@ -157,6 +164,8 @@ class AuthControllerIntegrationTest {
         payload.put("lang", "en");
         payload.put("password", "password123");
         payload.put("roleId", 1);
+        payload.put("privacyPolicyAccepted", true);
+        payload.put("termsAccepted", true);
 
         mockMvc.perform(post("/register")
                 .contentType(MediaType.APPLICATION_JSON)

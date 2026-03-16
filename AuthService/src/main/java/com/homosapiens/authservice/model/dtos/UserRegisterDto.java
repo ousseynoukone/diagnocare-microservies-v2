@@ -31,4 +31,10 @@ public class UserRegisterDto {
 
     @NotNull(message = "Role Id must not be null")
     private Long roleId;
+
+    @NotNull(message = "Privacy policy acceptance is required")
+    private Boolean privacyPolicyAccepted;
+
+    @NotNull(message = "Terms of service acceptance is required")
+    private Boolean termsAccepted;
 }

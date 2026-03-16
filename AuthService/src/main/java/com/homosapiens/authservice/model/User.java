@@ -2,10 +2,14 @@ package com.homosapiens.authservice.model;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.homosapiens.authservice.core.security.EncryptedStringConverter;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.*;
 import lombok.Data;
 
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
@@ -25,7 +29,11 @@ public class User {
     @NotNull(message = "Email must not be null")
     @Email(message = "Email should be valid")
     @Column(unique = true)
+    @Convert(converter = EncryptedStringConverter.class)
     private String email;
+
+    @Column(name = "email_hash", unique = true, nullable = false, length = 64)
+    private String emailHash;
 
     @NotNull(message = "First name must not be null")
     @Size(min = 2, max = 50, message = "First name must be between 2 and 50 characters")
@@ -36,6 +44,7 @@ public class User {
     private String lastName;
 
     @Pattern(regexp = "\\+?[0-9]{7,15}", message = "Phone number must be valid")
+    @Convert(converter = EncryptedStringConverter.class)
     private String phoneNumber;
 
     @Column(length = 5)
@@ -48,6 +57,18 @@ public class User {
 
     @Column(name = "email_verified", nullable = false)
     private boolean emailVerified = false;
+
+    @Column(name = "privacy_policy_accepted", nullable = false)
+    private Boolean privacyPolicyAccepted = false;
+
+    @Column(name = "terms_accepted", nullable = false)
+    private Boolean termsAccepted = false;
+
+    @Column(name = "consent_date")
+    private Date consentDate;
+
+    @Column(name = "consent_version", length = 50)
+    private String consentVersion;
 
     @CreationTimestamp
     @Column(updatable = false, name = "created_at")
@@ -84,6 +105,33 @@ public class User {
                     .replace("-", "")
                     .replace("(", "")
                     .replace(")", "");
+        }
+
+        // Calculate email hash for uniqueness checks (before encryption)
+        if (email != null && emailHash == null) {
+            emailHash = calculateEmailHash(email);
+        }
+    }
+
+    /**
+     * Calculates SHA-256 hash of email for uniqueness checks.
+     * This allows checking email uniqueness even when email is encrypted.
+     */
+    private String calculateEmailHash(String email) {
+        try {
+            MessageDigest digest = MessageDigest.getInstance("SHA-256");
+            byte[] hash = digest.digest(email.toLowerCase().trim().getBytes(StandardCharsets.UTF_8));
+            StringBuilder hexString = new StringBuilder();
+            for (byte b : hash) {
+                String hex = Integer.toHexString(0xff & b);
+                if (hex.length() == 1) {
+                    hexString.append('0');
+                }
+                hexString.append(hex);
+            }
+            return hexString.toString();
+        } catch (NoSuchAlgorithmException e) {
+            throw new RuntimeException("SHA-256 algorithm not available", e);
         }
     }
 }

@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.homosapiens.diagnocareservice.dto.UserSyncEventDTO;
 import com.homosapiens.diagnocareservice.model.entity.User;
 import com.homosapiens.diagnocareservice.repository.UserRepository;
+import com.homosapiens.diagnocareservice.service.UserDataAnonymizationService;
 import lombok.RequiredArgsConstructor;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.springframework.kafka.annotation.KafkaListener;
@@ -16,6 +17,7 @@ import java.util.logging.Logger;
 public class UserSyncConsumer {
     private final ObjectMapper objectMapper;
     private final UserRepository userRepository;
+    private final UserDataAnonymizationService userDataAnonymizationService;
     private final Logger logger = Logger.getLogger(UserSyncConsumer.class.getName());
 
     @KafkaListener(topics = {"USER_REGISTERED", "USER_UPDATE", "USER_DELETED"}, groupId = "diagnocare-user-sync")
@@ -28,10 +30,12 @@ public class UserSyncConsumer {
             }
 
             if ("USER_DELETED".equals(record.topic())) {
-                userRepository.findById(event.getId()).ifPresent(user -> {
-                    user.setIsActive(false);
-                    userRepository.save(user);
-                });
+                try {
+                    userDataAnonymizationService.anonymizeUserData(event.getId());
+                    logger.info("User " + event.getId() + " anonymized successfully");
+                } catch (Exception e) {
+                    logger.severe("Failed to anonymize user " + event.getId() + ": " + e.getMessage());
+                }
                 return;
             }
 
