@@ -35,7 +35,20 @@ public class UserSyncConsumer {
                 return;
             }
 
-            User user = userRepository.findById(event.getId()).orElseGet(User::new);
+            // Try to find user by ID first
+            User user = userRepository.findById(event.getId()).orElse(null);
+            
+            // If not found by ID, try to find by email (to avoid duplicate email constraint violation)
+            if (user == null && event.getEmail() != null) {
+                user = userRepository.findByEmail(event.getEmail()).orElse(null);
+            }
+            
+            // If still not found, create a new user
+            if (user == null) {
+                user = new User();
+            }
+            
+            // Update user fields
             user.setId(event.getId());
             user.setEmail(event.getEmail());
             user.setFirstName(event.getFirstName());

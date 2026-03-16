@@ -1,11 +1,13 @@
 package com.homosapiens.diagnocareservice.controller;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.homosapiens.diagnocareservice.core.kafka.KafkaProducer;
 import jakarta.transaction.Transactional;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 
@@ -20,6 +22,9 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @AutoConfigureMockMvc(addFilters = false)
 @Transactional
 class SymptomControllerIntegrationTest {
+
+    @MockBean
+    private KafkaProducer kafkaProducer;
 
     @Autowired
     private MockMvc mockMvc;
@@ -37,8 +42,8 @@ class SymptomControllerIntegrationTest {
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(payload)))
                 .andExpect(status().isCreated())
-                .andExpect(jsonPath("$.label").value("Headache"))
-                .andExpect(jsonPath("$.symptomLabelId").value(1));
+                .andExpect(jsonPath("$.data.label").value("Headache"))
+                .andExpect(jsonPath("$.data.symptomLabelId").value(1));
     }
 
     @Test
@@ -56,7 +61,7 @@ class SymptomControllerIntegrationTest {
                 .getResponse()
                 .getContentAsString();
 
-        Long symptomId = objectMapper.readTree(createResponse).get("id").asLong();
+        Long symptomId = objectMapper.readTree(createResponse).get("data").get("id").asLong();
 
         // Update the symptom
         Map<String, Object> updatePayload = new HashMap<>();
@@ -67,7 +72,7 @@ class SymptomControllerIntegrationTest {
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(updatePayload)))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.label").value("Updated Headache"));
+                .andExpect(jsonPath("$.data.label").value("Updated Headache"));
     }
 
     @Test
@@ -96,7 +101,7 @@ class SymptomControllerIntegrationTest {
                 .getResponse()
                 .getContentAsString();
 
-        Long symptomId = objectMapper.readTree(createResponse).get("id").asLong();
+        Long symptomId = objectMapper.readTree(createResponse).get("data").get("id").asLong();
 
         // Delete the symptom
         mockMvc.perform(delete("/symptoms/" + symptomId))
@@ -105,7 +110,7 @@ class SymptomControllerIntegrationTest {
 
     @Test
     void getSymptomById_ShouldReturnSymptom_WhenSymptomExists() throws Exception {
-        // First create a symptom
+        // On crée les symptômes
         Map<String, Object> createPayload = new HashMap<>();
         createPayload.put("label", "Test Headache");
         createPayload.put("symptomLabelId", 2L);
@@ -118,13 +123,13 @@ class SymptomControllerIntegrationTest {
                 .getResponse()
                 .getContentAsString();
 
-        Long symptomId = objectMapper.readTree(createResponse).get("id").asLong();
+        Long symptomId = objectMapper.readTree(createResponse).get("data").get("id").asLong();
 
-        // Get the symptom
+        // On recupere les symptome
         mockMvc.perform(get("/symptoms/" + symptomId))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.id").value(symptomId))
-                .andExpect(jsonPath("$.label").value("Test Headache"));
+                .andExpect(jsonPath("$.data.id").value(symptomId))
+                .andExpect(jsonPath("$.data.label").value("Test Headache"));
     }
 
     @Test
@@ -137,7 +142,7 @@ class SymptomControllerIntegrationTest {
     void getAllSymptoms_ShouldReturnListOfSymptoms() throws Exception {
         mockMvc.perform(get("/symptoms"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$").isArray());
+                .andExpect(jsonPath("$.data").isArray());
     }
 
     @Test
@@ -156,6 +161,6 @@ class SymptomControllerIntegrationTest {
         mockMvc.perform(get("/symptoms/search")
                 .param("label", "head"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$").isArray());
+                .andExpect(jsonPath("$.data").isArray());
     }
 }

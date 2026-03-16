@@ -326,12 +326,10 @@ public class AuthServiceTest {
 
     @Test
     void deleteUser_ShouldThrowNotFound_WhenUserDoesNotExist() {
-        // Arrange
         Long userId = 999L;
 
         when(userRepository.findById(userId)).thenReturn(Optional.empty());
 
-        // Act & Assert
         AppException exception = assertThrows(AppException.class, () -> authService.deleteUser(userId));
         assertEquals(HttpStatus.NOT_FOUND, exception.getStatus());
         assertEquals("User not found", exception.getMessage());

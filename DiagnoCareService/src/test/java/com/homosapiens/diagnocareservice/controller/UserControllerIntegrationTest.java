@@ -1,11 +1,16 @@
 package com.homosapiens.diagnocareservice.controller;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.homosapiens.diagnocareservice.core.kafka.KafkaProducer;
+import com.homosapiens.diagnocareservice.model.entity.User;
+import com.homosapiens.diagnocareservice.repository.UserRepository;
 import jakarta.transaction.Transactional;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 
@@ -21,26 +26,45 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @Transactional
 class UserControllerIntegrationTest {
 
+    @MockBean
+    private KafkaProducer kafkaProducer;
+
     @Autowired
     private MockMvc mockMvc;
 
     @Autowired
     private ObjectMapper objectMapper;
 
+    @Autowired
+    private UserRepository userRepository;
+
+    private Long testUserId;
+
+    @BeforeEach
+    void setUp() {
+        User user = new User();
+        user.setFirstName("John");
+        user.setLastName("Doe");
+        user.setEmail("john.doe@example.com");
+        user.setPhoneNumber("0123456789012");
+        user.setLang("fr");
+        user.setIsActive(true);
+        User saved = userRepository.save(user);
+        testUserId = saved.getId();
+    }
+
     @Test
     void updateUser_ShouldReturnUpdatedUser_WhenUserExists() throws Exception {
-        // First create a user (if needed) or use existing one
-        // For this test, we'll assume user with ID 1 exists from seeders
         Map<String, Object> payload = new HashMap<>();
         payload.put("firstName", "Updated");
         payload.put("lastName", "Name");
         payload.put("email", "updated@example.com");
 
-        mockMvc.perform(put("/users/1")
+        mockMvc.perform(put("/users/" + testUserId)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(payload)))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.firstName").value("Updated"));
+                .andExpect(jsonPath("$.data.firstName").value("Updated"));
     }
 
     @Test
@@ -56,18 +80,15 @@ class UserControllerIntegrationTest {
 
     @Test
     void deleteUser_ShouldReturnNoContent_WhenUserExists() throws Exception {
-        // This test assumes a user exists or creates one first
-        // For safety, we'll test with a non-existent user and expect 204
-        mockMvc.perform(delete("/users/99999"))
+        mockMvc.perform(delete("/users/" + testUserId))
                 .andExpect(status().isNoContent());
     }
 
     @Test
     void getUserById_ShouldReturnUser_WhenUserExists() throws Exception {
-        // Assuming user with ID 1 exists from seeders
-        mockMvc.perform(get("/users/1"))
+        mockMvc.perform(get("/users/" + testUserId))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.id").value(1));
+                .andExpect(jsonPath("$.data.id").value(testUserId));
     }
 
     @Test
@@ -80,6 +101,6 @@ class UserControllerIntegrationTest {
     void getAllUsers_ShouldReturnListOfUsers() throws Exception {
         mockMvc.perform(get("/users"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$").isArray());
+                .andExpect(jsonPath("$.data").isArray());
     }
 }

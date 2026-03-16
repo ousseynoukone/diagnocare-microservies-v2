@@ -1,13 +1,25 @@
 package com.homosapiens.authservice.controller;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.homosapiens.authservice.core.kafka.KafkaProducer;
+import com.homosapiens.authservice.model.Role;
+import com.homosapiens.authservice.model.enums.RoleEnum;
+import com.homosapiens.authservice.repository.RoleRepository;
+import jakarta.mail.internet.MimeMessage;
 import jakarta.transaction.Transactional;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.http.MediaType;
+import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.test.web.servlet.MockMvc;
+
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.doNothing;
+import static org.mockito.Mockito.when;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -21,11 +33,38 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @Transactional
 class AuthControllerIntegrationTest {
 
+    @MockBean
+    private KafkaProducer kafkaProducer;
+
+    @MockBean
+    private JavaMailSender javaMailSender;
+
     @Autowired
     private MockMvc mockMvc;
 
     @Autowired
     private ObjectMapper objectMapper;
+
+    @Autowired
+    private RoleRepository roleRepository;
+
+    @BeforeEach
+    void setUp() throws Exception {
+        // Mock JavaMailSender to prevent mail sending failures
+        MimeMessage mimeMessage = org.mockito.Mockito.mock(MimeMessage.class);
+        when(javaMailSender.createMimeMessage()).thenReturn(mimeMessage);
+        doNothing().when(javaMailSender).send(any(MimeMessage.class));
+
+        // Seed roles for tests
+        for (RoleEnum roleEnum : RoleEnum.values()) {
+            if (roleRepository.findByName(roleEnum) == null) {
+                Role role = new Role();
+                role.setName(roleEnum);
+                role.setDescription("Default description for " + roleEnum.name());
+                roleRepository.save(role);
+            }
+        }
+    }
 
 
     @Test

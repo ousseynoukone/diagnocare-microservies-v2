@@ -25,8 +25,8 @@ services:
       POSTGRES_USER: ${DB_USERNAME}
       POSTGRES_PASSWORD: ${DB_PASSWORD}
     # Internal only (do not expose in deployment)
-    # ports:
-    #   - ${DIAGNOCARE_DB_PORT}:5432
+    ports:
+      - ${DIAGNOCARE_DB_PORT}:5432
 
     volumes:
       - diagnocare_postgres_data:/var/lib/postgresql/data
@@ -41,8 +41,8 @@ services:
     container_name: pgadmin4
     restart: always
     # Optional admin UI; expose only if needed
-    # ports:
-    #   - "8888:80"
+    ports:
+       - "8888:80"
     environment:
       PGADMIN_DEFAULT_EMAIL: ${DB_USERNAME}@ok.com
       PGADMIN_DEFAULT_PASSWORD: ${DB_PASSWORD}
@@ -117,9 +117,9 @@ services:
     container_name: kafka-broker
     restart: always
     # Internal only; expose 29092 only if external clients need Kafka
-    # ports:
+    ports:
     #   - "9092:9092"      # Internal broker port
-    #   - "29092:29092"    # External access port
+      - "29092:29092"    # External access port
     environment:
       # KRaft Configuration (Kafka without Zookeeper)
       KAFKA_NODE_ID: 1
