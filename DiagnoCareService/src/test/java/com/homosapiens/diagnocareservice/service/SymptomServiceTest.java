@@ -31,12 +31,12 @@ class SymptomServiceTest {
     void createSymptom_ShouldReturnSavedSymptom_WhenSymptomIsValid() {
         Symptom symptom = new Symptom();
         symptom.setLabel("Headache");
-        symptom.setSymptomLabelId("SYM001");
+        symptom.setSymptomLabelId(1L);
 
         Symptom savedSymptom = new Symptom();
         savedSymptom.setId(1L);
         savedSymptom.setLabel("Headache");
-        savedSymptom.setSymptomLabelId("SYM001");
+        savedSymptom.setSymptomLabelId(1L);
 
         when(symptomRepository.save(any(Symptom.class))).thenReturn(savedSymptom);
 
@@ -53,12 +53,12 @@ class SymptomServiceTest {
         Long symptomId = 1L;
         Symptom symptom = new Symptom();
         symptom.setLabel("Updated Headache");
-        symptom.setSymptomLabelId("SYM001");
+        symptom.setSymptomLabelId(1L);
 
         Symptom updatedSymptom = new Symptom();
         updatedSymptom.setId(symptomId);
         updatedSymptom.setLabel("Updated Headache");
-        updatedSymptom.setSymptomLabelId("SYM001");
+        updatedSymptom.setSymptomLabelId(1L);
 
         when(symptomRepository.existsById(symptomId)).thenReturn(true);
         when(symptomRepository.save(any(Symptom.class))).thenReturn(updatedSymptom);
@@ -168,13 +168,13 @@ class SymptomServiceTest {
         Symptom symptom = new Symptom();
         symptom.setId(1L);
         symptom.setLabel("Headache");
-        symptom.setSymptomLabelId("SYM001");
+        symptom.setSymptomLabelId(1L);
 
         SymptomDTO dto = symptomService.convertToDTO(symptom);
 
         assertEquals(1L, dto.getId());
         assertEquals("Headache", dto.getLabel());
-        assertEquals("SYM001", dto.getSymptomLabelId());
+        assertEquals(1L, dto.getSymptomLabelId());
     }
 
     @Test

@@ -31,14 +31,14 @@ class SymptomControllerIntegrationTest {
     void createSymptom_ShouldReturnCreatedSymptom_WhenSymptomIsValid() throws Exception {
         Map<String, Object> payload = new HashMap<>();
         payload.put("label", "Headache");
-        payload.put("symptomLabelId", "SYM001");
+        payload.put("symptomLabelId", 1L);
 
         mockMvc.perform(post("/symptoms")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(payload)))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.label").value("Headache"))
-                .andExpect(jsonPath("$.symptomLabelId").value("SYM001"));
+                .andExpect(jsonPath("$.symptomLabelId").value(1));
     }
 
     @Test
@@ -46,7 +46,7 @@ class SymptomControllerIntegrationTest {
         // First create a symptom
         Map<String, Object> createPayload = new HashMap<>();
         createPayload.put("label", "Original Headache");
-        createPayload.put("symptomLabelId", "SYM001");
+        createPayload.put("symptomLabelId", 1L);
 
         String createResponse = mockMvc.perform(post("/symptoms")
                 .contentType(MediaType.APPLICATION_JSON)
@@ -61,7 +61,7 @@ class SymptomControllerIntegrationTest {
         // Update the symptom
         Map<String, Object> updatePayload = new HashMap<>();
         updatePayload.put("label", "Updated Headache");
-        updatePayload.put("symptomLabelId", "SYM001");
+        updatePayload.put("symptomLabelId", 1L);
 
         mockMvc.perform(put("/symptoms/" + symptomId)
                 .contentType(MediaType.APPLICATION_JSON)
@@ -86,7 +86,7 @@ class SymptomControllerIntegrationTest {
         // First create a symptom
         Map<String, Object> createPayload = new HashMap<>();
         createPayload.put("label", "Temporary Headache");
-        createPayload.put("symptomLabelId", "SYM999");
+        createPayload.put("symptomLabelId", 999L);
 
         String createResponse = mockMvc.perform(post("/symptoms")
                 .contentType(MediaType.APPLICATION_JSON)
@@ -108,7 +108,7 @@ class SymptomControllerIntegrationTest {
         // First create a symptom
         Map<String, Object> createPayload = new HashMap<>();
         createPayload.put("label", "Test Headache");
-        createPayload.put("symptomLabelId", "SYM002");
+        createPayload.put("symptomLabelId", 2L);
 
         String createResponse = mockMvc.perform(post("/symptoms")
                 .contentType(MediaType.APPLICATION_JSON)
@@ -145,7 +145,7 @@ class SymptomControllerIntegrationTest {
         // First create a symptom
         Map<String, Object> createPayload = new HashMap<>();
         createPayload.put("label", "Headache");
-        createPayload.put("symptomLabelId", "SYM003");
+        createPayload.put("symptomLabelId", 3L);
 
         mockMvc.perform(post("/symptoms")
                 .contentType(MediaType.APPLICATION_JSON)

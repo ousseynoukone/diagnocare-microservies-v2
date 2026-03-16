@@ -178,7 +178,7 @@ class UserServiceTest {
 
     @Test
     void getUsersByRole_ShouldReturnUsersWithRole() {
-        RoleEnum role = RoleEnum.DOCTOR;
+        RoleEnum role = RoleEnum.ADMIN;
         User user1 = new User();
         user1.setId(1L);
         user1.setEmail("doctor1@example.com");

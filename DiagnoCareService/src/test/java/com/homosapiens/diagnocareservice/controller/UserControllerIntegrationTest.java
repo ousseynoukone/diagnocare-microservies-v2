@@ -57,9 +57,9 @@ class UserControllerIntegrationTest {
     @Test
     void deleteUser_ShouldReturnNoContent_WhenUserExists() throws Exception {
         // This test assumes a user exists or creates one first
-        // For safety, we'll test with a non-existent user and expect 204 or 404
+        // For safety, we'll test with a non-existent user and expect 204
         mockMvc.perform(delete("/users/99999"))
-                .andExpect(status().isNoContent().or(status().isNotFound()));
+                .andExpect(status().isNoContent());
     }
 
     @Test
