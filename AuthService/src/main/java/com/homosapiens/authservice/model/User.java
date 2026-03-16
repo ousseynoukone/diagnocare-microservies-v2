@@ -75,4 +75,18 @@ public class User {
             lang = "fr";
         }
     }
+
+    @PrePersist
+    @PreUpdate
+    private void normalizePhoneNumber() {
+        if (phoneNumber == null) {
+            return;
+        }
+        // Trim and remove common separators so validation is stable across clients (e.g. "04 20 37 13 30")
+        phoneNumber = phoneNumber.trim()
+                .replace(" ", "")
+                .replace("-", "")
+                .replace("(", "")
+                .replace(")", "");
+    }
 }

@@ -49,6 +49,9 @@ public class AuthFilter extends AbstractGatewayFilterFactory<AuthFilter.Config> 
             if (isSwaggerPath(path)) {
                 return chain.filter(exchange);
             }
+            if (isPublicAuthPath(path)) {
+                return chain.filter(exchange);
+            }
             if (!exchange.getRequest().getHeaders().containsKey(HttpHeaders.AUTHORIZATION)) {
                 return createErrorResponse(exchange, HttpStatus.UNAUTHORIZED, "Missing Authorization header");
             }
@@ -151,5 +154,23 @@ public class AuthFilter extends AbstractGatewayFilterFactory<AuthFilter.Config> 
         return path.startsWith("/api/v1/diagnocare/swagger-ui")
                 || path.startsWith("/api/v1/diagnocare/v3/api-docs")
                 || path.startsWith("/api/v1/diagnocare/swagger-ui.html");
+    }
+
+    /**
+     * Endpoints that must be accessible without a JWT (login/register/refresh, etc.).
+     * If these are protected by the gateway, callers will only see 401/403 instead of AuthService errors.
+     */
+    private boolean isPublicAuthPath(String path) {
+        if (path == null) {
+            return false;
+        }
+        // Adjust these prefixes to match your gateway route paths
+        return path.startsWith("/api/v1/auth/login")
+                || path.startsWith("/api/v1/auth/register")
+                || path.startsWith("/api/v1/auth/refresh")
+                || path.startsWith("/api/v1/auth/validate")
+                || path.startsWith("/api/v1/auth/swagger-ui")
+                || path.startsWith("/api/v1/auth/v3/api-docs")
+                || path.startsWith("/api/v1/auth/swagger-ui.html");
     }
 }
