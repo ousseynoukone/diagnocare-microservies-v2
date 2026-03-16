@@ -1,6 +1,3 @@
-**/target/
-*.class
-
 # ML service generated artifacts
 MlPredictionService/models/*.joblib
 MlPredictionService/**/__pycache__/
