@@ -32,7 +32,7 @@ public class User extends BaseEntity{
     @Convert(converter = EncryptedStringConverter.class)
     private String email;
 
-    @Column(name = "email_hash", unique = true, nullable = false, length = 64)
+    @Column(name = "email_hash", unique = true, length = 64)
     private String emailHash;
 
     @Column(length = 255)

@@ -86,22 +86,19 @@ def create_app() -> Flask:
     model_repository = ModelRepository(model_config)
     translation_repository = TranslationRepository(model_config)
     
-    # Chargement des modèles et traductions
+    # Chargement des modèles et traductions (doivent être pré-construits en dehors du conteneur)
     if not model_repository.load_all():
-        app.logger.warning("Modèles non trouvés. Entraînement automatique des modèles...")
-        try:
-            from training.train_model import ModelTrainer
-            trainer = ModelTrainer(model_config)
-            trainer.train()
-            app.logger.info("Modèles entraînés avec succès. Rechargement...")
-            if not model_repository.load_all():
-                app.logger.error("Erreur lors du chargement des modèles après entraînement.")
-        except Exception as e:
-            app.logger.error(f"Erreur lors de l'entraînement automatique des modèles: {e}")
-            app.logger.error("Le service peut ne pas fonctionner correctement sans modèles entraînés.")
-    
+        app.logger.error(
+            "Modèles .joblib introuvables. Exécutez l'entraînement en dehors du conteneur "
+            "(train.py) et placez les fichiers dans models/ avant de construire l'image."
+        )
+        raise RuntimeError(
+            "ML models not found. Train outside the container (run train.py) and ensure "
+            "models/*.joblib exist in the build context."
+        )
+
     if not translation_repository.load():
-        app.logger.warning("Erreur lors du chargement des traductions. Utilisation de traductions vides.")
+        app.logger.warning("Traductions non chargées ou fichier absent; utilisation de traductions vides.")
     
     # Initialisation des services
     translation_service = TranslationService(translation_repository)

@@ -1,0 +1,28 @@
+# Training and translation generation - done outside the image
+training/
+train.py
+translate_symptoms_fr.py
+generate_symptom_translations.py
+
+# Dataset used only for training (large file)
+data/dataset.csv
+**/Doctor_Versus_Disease.csv
+
+# Python cache and env
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+.env
+.venv
+venv/
+*.egg-info/
+.eggs/
+
+# IDE and git
+.git/
+.gitignore
+.dockerignore
+*.md
+!README*.md

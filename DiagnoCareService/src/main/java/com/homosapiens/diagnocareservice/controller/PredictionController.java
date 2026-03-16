@@ -8,6 +8,8 @@ import com.homosapiens.diagnocareservice.core.exception.AppException;
 import com.homosapiens.diagnocareservice.repository.SymptomRepository;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.ExampleObject;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -33,10 +35,26 @@ public class PredictionController {
     private final CheckInService checkInService;
 
     @PostMapping
-    @Operation(summary = "Create a new prediction", description = "Creates a new AI prediction based on symptom session")
+    @Operation(
+            summary = "Create a new prediction",
+            description = "Creates a new AI prediction from the given user ID and list of symptom labels. Only these two fields are required."
+    )
     @Transactional(rollbackFor = Exception.class)
     public ResponseEntity<PredictionWithResultsResponse> makePrediction(
-            @Valid @RequestBody SessionSymptomRequestDTO sessionSymptomRequestDTO) {
+            @Valid @RequestBody
+            @io.swagger.v3.oas.annotations.parameters.RequestBody(
+                    content = @Content(
+                            mediaType = "application/json",
+                            examples = @ExampleObject(
+                                    name = "Cardiac symptoms",
+                                    value = "{\n  \"userId\": 8,\n  \"symptomLabels\": [\n    \"chest_pain\",\n    \"breathlessness\",\n    \"sweating\",\n    \"fatigue\",\n    \"dizziness\",\n    \"palpitations\"\n  ]\n}"
+                            )
+                    )
+            )
+            CreatePredictionRequestDTO request) {
+        SessionSymptomRequestDTO sessionSymptomRequestDTO = new SessionSymptomRequestDTO();
+        sessionSymptomRequestDTO.setUserId(request.getUserId());
+        sessionSymptomRequestDTO.setSymptomLabels(request.getSymptomLabels());
         PredictionCreationResult result = predictionWorkflowService.createPrediction(sessionSymptomRequestDTO, null);
 
         checkInService.scheduleCheckIn(result.getPrediction());

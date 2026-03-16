@@ -26,6 +26,10 @@ public class ResponseWrapperAdvice implements ResponseBodyAdvice<Object> {
         if (isSwaggerPath(request)) {
             return body;
         }
+        // Export endpoints return raw JSON string; do not wrap (avoids ClassCastException)
+        if (request.getURI().getPath().contains("/export")) {
+            return body;
+        }
         if (body instanceof byte[] || body instanceof java.io.ByteArrayOutputStream) {
             return body;
         }

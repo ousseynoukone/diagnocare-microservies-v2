@@ -3,6 +3,7 @@ package com.homosapiens.diagnocareservice.service;
 import com.homosapiens.diagnocareservice.model.entity.User;
 import com.homosapiens.diagnocareservice.model.entity.enums.RoleEnum;
 import com.homosapiens.diagnocareservice.repository.UserRepository;
+import com.homosapiens.diagnocareservice.service.UserLookupService;
 import com.homosapiens.diagnocareservice.service.impl.UserServiceImpl;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -23,6 +24,9 @@ class UserServiceTest {
 
     @Mock
     private UserRepository userRepository;
+
+    @Mock
+    private UserLookupService userLookupService;
 
     @InjectMocks
     private UserServiceImpl userService;
@@ -135,25 +139,25 @@ class UserServiceTest {
         user.setId(1L);
         user.setEmail(email);
 
-        when(userRepository.findByEmail(email)).thenReturn(Optional.of(user));
+        when(userLookupService.findUserByEmail(email)).thenReturn(Optional.of(user));
 
         Optional<User> result = userService.getUserByEmail(email);
 
         assertTrue(result.isPresent());
         assertEquals(email, result.get().getEmail());
-        verify(userRepository).findByEmail(email);
+        verify(userLookupService).findUserByEmail(email);
     }
 
     @Test
     void getUserByEmail_ShouldReturnEmpty_WhenUserDoesNotExist() {
         String email = "missing@example.com";
 
-        when(userRepository.findByEmail(email)).thenReturn(Optional.empty());
+        when(userLookupService.findUserByEmail(email)).thenReturn(Optional.empty());
 
         Optional<User> result = userService.getUserByEmail(email);
 
         assertFalse(result.isPresent());
-        verify(userRepository).findByEmail(email);
+        verify(userLookupService).findUserByEmail(email);
     }
 
     @Test
@@ -197,24 +201,24 @@ class UserServiceTest {
     void existsByEmail_ShouldReturnTrue_WhenEmailExists() {
         String email = "test@example.com";
 
-        when(userRepository.existsByEmail(email)).thenReturn(true);
+        when(userLookupService.existsByEmail(email)).thenReturn(true);
 
         boolean result = userService.existsByEmail(email);
 
         assertTrue(result);
-        verify(userRepository).existsByEmail(email);
+        verify(userLookupService).existsByEmail(email);
     }
 
     @Test
     void existsByEmail_ShouldReturnFalse_WhenEmailDoesNotExist() {
         String email = "missing@example.com";
 
-        when(userRepository.existsByEmail(email)).thenReturn(false);
+        when(userLookupService.existsByEmail(email)).thenReturn(false);
 
         boolean result = userService.existsByEmail(email);
 
         assertFalse(result);
-        verify(userRepository).existsByEmail(email);
+        verify(userLookupService).existsByEmail(email);
     }
 
     @Test
