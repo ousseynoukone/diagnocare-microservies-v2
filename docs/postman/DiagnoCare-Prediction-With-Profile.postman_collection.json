@@ -27,6 +27,22 @@
       }
     },
     {
+      "name": "1b. Profil type crise cardiaque (facteurs de risque)",
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" },
+          { "key": "Authorization", "value": "Bearer {{token}}" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"userId\": {{userId}},\n  \"age\": 58,\n  \"gender\": \"MALE\",\n  \"weight\": 92.0,\n  \"bmi\": 30,\n  \"meanBloodPressure\": 152.0,\n  \"meanCholesterol\": 265.0,\n  \"isSmoking\": true,\n  \"alcohol\": true,\n  \"sedentary\": true,\n  \"familyAntecedents\": [\"Heart attack\", \"Hypertension\", \"Coronary artery disease\"]\n}"
+        },
+        "url": "{{baseUrl}}/api/v1/diagnocare/patient-profiles",
+        "description": "Profil à haut risque cardiaque : âge 58 ans, homme, surpoids (IMC 30), hypertension (152 mmHg), hypercholestérolémie (265), tabagisme, sédentarité, antécédents familiaux cardiovasculaires. À utiliser avec la prédiction symptômes cardiaques (douleur thoracique, essoufflement, etc.)."
+      }
+    },
+    {
       "name": "2. Run prediction (with profile)",
       "request": {
         "method": "POST",

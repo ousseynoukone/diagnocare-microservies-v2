@@ -174,11 +174,15 @@ public class PredictionWorkflowServiceImpl implements PredictionWorkflowService 
     }
 
     private boolean determineRedAlert(MLPredictionResponseDTO mlResponse) {
-        if (mlResponse.getPredictions() != null && !mlResponse.getPredictions().isEmpty()) {
-            MLPredictionResponseDTO.PredictionResult topResult = mlResponse.getPredictions().get(0);
-            return urgentDiseaseService.isUrgentDisease(topResult.getDisease());
+        if (mlResponse.getPredictions() == null || mlResponse.getPredictions().isEmpty()) {
+            return false;
         }
-        return false;
+        MLPredictionResponseDTO.PredictionResult topResult = mlResponse.getPredictions().get(0);
+        // Urgent-disease list uses English names; ML may return "disease" in French when lang=fr
+        String diseaseNameForCheck = (topResult.getDisease_en() != null && !topResult.getDisease_en().isBlank())
+                ? topResult.getDisease_en()
+                : topResult.getDisease();
+        return diseaseNameForCheck != null && urgentDiseaseService.isUrgentDisease(diseaseNameForCheck);
     }
 
     private BigDecimal calculateBestScore(MLPredictionResponseDTO mlResponse) {
