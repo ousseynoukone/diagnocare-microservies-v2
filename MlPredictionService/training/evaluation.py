@@ -16,7 +16,7 @@ from config.model_config import ModelConfig
 
 def evaluate_and_report(
     model,
-    X_test: np.ndarray,
+    X_test,
     Y_test: np.ndarray,
     le_disease,
     le_specialist,

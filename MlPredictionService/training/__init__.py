@@ -1,6 +1,6 @@
 """
 Module de training pour les modèles ML
 """
-from .train_model import ModelTrainer
+from .model_trainer import ModelTrainer
 
 __all__ = ['ModelTrainer']

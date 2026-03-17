@@ -2,7 +2,7 @@
 Modèle de données pour une réponse de prédiction
 """
 from typing import List, Dict, Optional
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 
 
 @dataclass
@@ -51,7 +51,7 @@ class PredictionResponse:
     """
     predictions: List[PredictionResult]
     language: str
-    metadata: Dict[str, any]
+    metadata: Dict[str, Any]
     confidence_level: str = "high"
     confidence_note: Optional[str] = None
     
