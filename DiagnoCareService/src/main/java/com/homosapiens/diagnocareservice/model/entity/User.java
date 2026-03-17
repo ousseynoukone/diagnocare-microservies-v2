@@ -39,7 +39,7 @@ public class User extends BaseEntity{
     @Convert(converter = EncryptedStringConverter.class)
     private String address;
 
-    @Column(length = 13)
+    @Column(length = 255)
     @Convert(converter = EncryptedStringConverter.class)
     private String phoneNumber;
 

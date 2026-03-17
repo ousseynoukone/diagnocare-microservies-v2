@@ -9,7 +9,6 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -23,26 +22,6 @@ public class SymptomController {
 
     private final SymptomService symptomService;
     private final MLPredictionClient mlPredictionClient;
-
-    @PostMapping
-    @Operation(summary = "Create a new symptom", description = "Creates a new symptom in the system")
-    public ResponseEntity<SymptomDTO> createSymptom(@RequestBody Symptom symptom) {
-        Symptom created = symptomService.createSymptom(symptom);
-        return ResponseEntity.status(HttpStatus.CREATED).body(symptomService.convertToDTO(created));
-    }
-
-    @PutMapping("/{id}")
-    @Operation(summary = "Update a symptom", description = "Updates an existing symptom by ID")
-    public ResponseEntity<SymptomDTO> updateSymptom(
-            @Parameter(description = "Symptom ID") @PathVariable Long id,
-            @RequestBody Symptom symptom) {
-        try {
-            Symptom updated = symptomService.updateSymptom(id, symptom);
-            return ResponseEntity.ok(symptomService.convertToDTO(updated));
-        } catch (RuntimeException e) {
-            return ResponseEntity.notFound().build();
-        }
-    }
 
     @DeleteMapping("/{id}")
     @Operation(summary = "Delete a symptom", description = "Deletes a symptom by ID")

@@ -9,7 +9,6 @@ import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -22,14 +21,6 @@ import java.util.List;
 public class SessionSymptomController {
 
     private final SessionSymptomService sessionSymptomService;
-
-    @PostMapping
-    @Operation(summary = "Create a new symptom session", description = "Creates a new symptom session for a user")
-    public ResponseEntity<SessionSymptomDTO> createSessionSymptom(
-            @Valid @RequestBody SessionSymptomRequestDTO requestDTO) {
-        SessionSymptom created = sessionSymptomService.createSessionSymptom(requestDTO);
-        return ResponseEntity.status(HttpStatus.CREATED).body(sessionSymptomService.convertToDTO(created));
-    }
 
     @PutMapping("/{id}")
     @Operation(summary = "Update a symptom session", description = "Updates an existing symptom session by ID")

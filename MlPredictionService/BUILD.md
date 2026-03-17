@@ -30,6 +30,8 @@ Ensure these exist before building:
 - `models/feature_columns.joblib`
 - `data/translations.json`
 
+If you have `matplotlib` installed when running training, confusion matrix plots are also generated: `models/confusion_matrix_disease.png` and `models/confusion_matrix_specialist.png`.
+
 ## 2. Build the image
 
 ```bash

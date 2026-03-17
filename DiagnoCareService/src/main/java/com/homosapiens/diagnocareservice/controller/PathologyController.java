@@ -7,7 +7,6 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -20,26 +19,6 @@ import java.util.List;
 public class PathologyController {
 
     private final PathologyService pathologyService;
-
-    @PostMapping
-    @Operation(summary = "Create a new pathology", description = "Creates a new pathology in the system")
-    public ResponseEntity<PathologyDTO> createPathology(@RequestBody Pathology pathology) {
-        Pathology created = pathologyService.createPathology(pathology);
-        return ResponseEntity.status(HttpStatus.CREATED).body(pathologyService.convertToDTO(created));
-    }
-
-    @PutMapping("/{id}")
-    @Operation(summary = "Update a pathology", description = "Updates an existing pathology by ID")
-    public ResponseEntity<PathologyDTO> updatePathology(
-            @Parameter(description = "Pathology ID") @PathVariable Long id,
-            @RequestBody Pathology pathology) {
-        try {
-            Pathology updated = pathologyService.updatePathology(id, pathology);
-            return ResponseEntity.ok(pathologyService.convertToDTO(updated));
-        } catch (RuntimeException e) {
-            return ResponseEntity.notFound().build();
-        }
-    }
 
     @DeleteMapping("/{id}")
     @Operation(summary = "Delete a pathology", description = "Deletes a pathology by ID")

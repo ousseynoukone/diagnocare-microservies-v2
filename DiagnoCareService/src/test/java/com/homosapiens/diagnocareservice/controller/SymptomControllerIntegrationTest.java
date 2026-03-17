@@ -2,7 +2,10 @@ package com.homosapiens.diagnocareservice.controller;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.homosapiens.diagnocareservice.core.kafka.KafkaProducer;
+import com.homosapiens.diagnocareservice.model.entity.Symptom;
+import com.homosapiens.diagnocareservice.service.SymptomService;
 import jakarta.transaction.Transactional;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
@@ -10,9 +13,6 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
-
-import java.util.HashMap;
-import java.util.Map;
 
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -32,103 +32,31 @@ class SymptomControllerIntegrationTest {
     @Autowired
     private ObjectMapper objectMapper;
 
-    @Test
-    void createSymptom_ShouldReturnCreatedSymptom_WhenSymptomIsValid() throws Exception {
-        Map<String, Object> payload = new HashMap<>();
-        payload.put("label", "Headache");
-        payload.put("symptomLabelId", 1L);
+    @Autowired
+    private SymptomService symptomService;
 
-        mockMvc.perform(post("/symptoms")
-                .contentType(MediaType.APPLICATION_JSON)
-                .content(objectMapper.writeValueAsString(payload)))
-                .andExpect(status().isCreated())
-                .andExpect(jsonPath("$.data.label").value("Headache"))
-                .andExpect(jsonPath("$.data.symptomLabelId").value(1));
-    }
+    private Long existingSymptomId;
 
-    @Test
-    void updateSymptom_ShouldReturnUpdatedSymptom_WhenSymptomExists() throws Exception {
-        // First create a symptom
-        Map<String, Object> createPayload = new HashMap<>();
-        createPayload.put("label", "Original Headache");
-        createPayload.put("symptomLabelId", 1L);
-
-        String createResponse = mockMvc.perform(post("/symptoms")
-                .contentType(MediaType.APPLICATION_JSON)
-                .content(objectMapper.writeValueAsString(createPayload)))
-                .andExpect(status().isCreated())
-                .andReturn()
-                .getResponse()
-                .getContentAsString();
-
-        Long symptomId = objectMapper.readTree(createResponse).get("data").get("id").asLong();
-
-        // Update the symptom
-        Map<String, Object> updatePayload = new HashMap<>();
-        updatePayload.put("label", "Updated Headache");
-        updatePayload.put("symptomLabelId", 1L);
-
-        mockMvc.perform(put("/symptoms/" + symptomId)
-                .contentType(MediaType.APPLICATION_JSON)
-                .content(objectMapper.writeValueAsString(updatePayload)))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.data.label").value("Updated Headache"));
-    }
-
-    @Test
-    void updateSymptom_ShouldReturnNotFound_WhenSymptomDoesNotExist() throws Exception {
-        Map<String, Object> payload = new HashMap<>();
-        payload.put("label", "Updated Headache");
-
-        mockMvc.perform(put("/symptoms/99999")
-                .contentType(MediaType.APPLICATION_JSON)
-                .content(objectMapper.writeValueAsString(payload)))
-                .andExpect(status().isNotFound());
+    @BeforeEach
+    void setUp() {
+        Symptom symptom = new Symptom();
+        symptom.setLabel("Test Headache");
+        symptom.setSymptomLabelId(1L);
+        Symptom created = symptomService.createSymptom(symptom);
+        existingSymptomId = created.getId();
     }
 
     @Test
     void deleteSymptom_ShouldReturnNoContent_WhenSymptomExists() throws Exception {
-        // First create a symptom
-        Map<String, Object> createPayload = new HashMap<>();
-        createPayload.put("label", "Temporary Headache");
-        createPayload.put("symptomLabelId", 999L);
-
-        String createResponse = mockMvc.perform(post("/symptoms")
-                .contentType(MediaType.APPLICATION_JSON)
-                .content(objectMapper.writeValueAsString(createPayload)))
-                .andExpect(status().isCreated())
-                .andReturn()
-                .getResponse()
-                .getContentAsString();
-
-        Long symptomId = objectMapper.readTree(createResponse).get("data").get("id").asLong();
-
-        // Delete the symptom
-        mockMvc.perform(delete("/symptoms/" + symptomId))
+        mockMvc.perform(delete("/symptoms/" + existingSymptomId))
                 .andExpect(status().isNoContent());
     }
 
     @Test
     void getSymptomById_ShouldReturnSymptom_WhenSymptomExists() throws Exception {
-        // On crée les symptômes
-        Map<String, Object> createPayload = new HashMap<>();
-        createPayload.put("label", "Test Headache");
-        createPayload.put("symptomLabelId", 2L);
-
-        String createResponse = mockMvc.perform(post("/symptoms")
-                .contentType(MediaType.APPLICATION_JSON)
-                .content(objectMapper.writeValueAsString(createPayload)))
-                .andExpect(status().isCreated())
-                .andReturn()
-                .getResponse()
-                .getContentAsString();
-
-        Long symptomId = objectMapper.readTree(createResponse).get("data").get("id").asLong();
-
-        // On recupere les symptome
-        mockMvc.perform(get("/symptoms/" + symptomId))
+        mockMvc.perform(get("/symptoms/" + existingSymptomId))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.data.id").value(symptomId))
+                .andExpect(jsonPath("$.data.id").value(existingSymptomId))
                 .andExpect(jsonPath("$.data.label").value("Test Headache"));
     }
 
@@ -147,19 +75,7 @@ class SymptomControllerIntegrationTest {
 
     @Test
     void searchSymptomsByLabel_ShouldReturnMatchingSymptoms() throws Exception {
-        // First create a symptom
-        Map<String, Object> createPayload = new HashMap<>();
-        createPayload.put("label", "Headache");
-        createPayload.put("symptomLabelId", 3L);
-
-        mockMvc.perform(post("/symptoms")
-                .contentType(MediaType.APPLICATION_JSON)
-                .content(objectMapper.writeValueAsString(createPayload)))
-                .andExpect(status().isCreated());
-
-        // Search for symptoms
-        mockMvc.perform(get("/symptoms/search")
-                .param("label", "head"))
+        mockMvc.perform(get("/symptoms/search").param("label", "head"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data").isArray());
     }
