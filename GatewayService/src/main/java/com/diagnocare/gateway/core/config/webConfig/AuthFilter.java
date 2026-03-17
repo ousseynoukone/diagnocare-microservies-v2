@@ -131,7 +131,7 @@ public class AuthFilter extends AbstractGatewayFilterFactory<AuthFilter.Config> 
 
         Map<String, Object> responseBodyMap = new HashMap<>();
         responseBodyMap.put("status", status.value());
-        responseBodyMap.put("message", message);
+        responseBodyMap.put("message", normalizeErrorMessage(message));
 
         try {
             byte[] bytes = objectMapper.writeValueAsBytes(responseBodyMap);
@@ -141,6 +141,56 @@ public class AuthFilter extends AbstractGatewayFilterFactory<AuthFilter.Config> 
             response.setStatusCode(HttpStatus.INTERNAL_SERVER_ERROR);
             return response.setComplete();
         }
+    }
+
+    /**
+     * AuthService peut renvoyer des erreurs sous forme de JSON (ex: {"error":"..."}).
+     * Si on met ce JSON brut dans "message", le client reçoit une string JSON dans une string.
+     * Ici on essaie d'extraire un message lisible.
+     */
+    private String normalizeErrorMessage(String rawBody) {
+        if (rawBody == null) {
+            return "Unauthorized";
+        }
+
+        String trimmed = rawBody.trim();
+        if (trimmed.isEmpty()) {
+            return "Unauthorized";
+        }
+
+        // Cas le plus fréquent: {"error":"..."}
+        // Ou parfois un wrapper: {"message":"Error","statusCode":401,"data":{"error":"..."}} etc.
+        if (trimmed.startsWith("{") && trimmed.endsWith("}")) {
+            try {
+                var node = objectMapper.readTree(trimmed);
+
+                if (node.hasNonNull("error") && node.get("error").isTextual()) {
+                    return node.get("error").asText();
+                }
+                if (node.hasNonNull("message") && node.get("message").isTextual()) {
+                    String msg = node.get("message").asText();
+                    // Si c'est un "Error" générique, on tente de prendre un détail dans data.error
+                    if (!msg.isBlank()) {
+                        if (node.has("data") && node.get("data").hasNonNull("error") && node.get("data").get("error").isTextual()) {
+                            return node.get("data").get("error").asText();
+                        }
+                        return msg;
+                    }
+                }
+                if (node.has("data") && node.get("data").isTextual()) {
+                    // Exemple: data contient déjà un message texte
+                    String msg = node.get("data").asText();
+                    if (!msg.isBlank()) {
+                        return msg;
+                    }
+                }
+            } catch (Exception ignore) {
+                // Si parsing échoue, on retombe sur le rawBody
+            }
+        }
+
+        // Sinon: c'est déjà un message texte.
+        return trimmed;
     }
 
     public static class Config {

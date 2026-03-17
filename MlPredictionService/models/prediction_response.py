@@ -1,7 +1,7 @@
 """
 Modèle de données pour une réponse de prédiction
 """
-from typing import List, Dict, Optional
+from typing import List, Dict, Optional, Any
 from dataclasses import dataclass
 
 
