@@ -600,20 +600,34 @@ private CheckInOutcome determineOutcome(Prediction previous, Prediction newPredi
     {
       "rank": 1,
       "disease": "Fungal infection",
+      "disease_en": "Fungal infection",
       "disease_fr": "Infection fongique",
-      "probability": 45.23,
+      "probability": 98.5,
       "specialist": "Dermatologist",
+      "specialist_en": "Dermatologist",
       "specialist_fr": "Dermatologue",
-      "specialist_probability": 42.15,
+      "specialist_probability": 98.5,
       "description": "..."
     }
   ],
+  "language": "en",
+  "confidence_level": "high",
+  "confidence_note": null,
   "metadata": {
     "symptoms_count": 3,
-    "profile_used": true
+    "profile_used": { "Age": 35, "Gender": "Male", "..." : "..." }
   }
 }
 ```
+
+**Confidence levels** (based on calibrated top-1 probability):
+| Level | Condition | Meaning |
+|-------|-----------|---------|
+| `high` | ≥ 40% | Strong prediction |
+| `moderate` | 20-40% | Multiple pathologies possible |
+| `low` | < 20% | Insufficient symptoms, user should provide more details |
+
+**Model**: Calibrated XGBoost with TF-IDF symptom encoding and feature interactions (profile × key symptoms). See [ML Prediction Service](06-ml-prediction-service.md) for details.
 
 ### Error Handling
 

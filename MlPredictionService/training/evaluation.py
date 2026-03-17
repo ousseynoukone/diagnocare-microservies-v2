@@ -23,6 +23,10 @@ def _is_profile_feature(col_name: str) -> bool:
     return '_normalized' in col_name or col_name.startswith(PROFILE_PREFIXES)
 
 
+def _is_interaction_feature(col_name: str) -> bool:
+    return col_name.startswith('IX_')
+
+
 def evaluate_and_report(
     model,
     X_test,
@@ -31,6 +35,7 @@ def evaluate_and_report(
     le_specialist,
     config: ModelConfig,
     feature_columns: list = None,
+    precomputed_importances: np.ndarray = None,
 ) -> None:
     Y_pred = model.predict(X_test)
     n_test = Y_test.shape[0]
@@ -78,7 +83,13 @@ def evaluate_and_report(
 
     # --- Feature importances ---
     if feature_columns is not None:
-        _report_feature_importances(model, feature_columns, config)
+        importances = precomputed_importances
+        if importances is None:
+            importances = _try_extract_importances(model, len(feature_columns))
+        if importances is not None:
+            _report_feature_importances(importances, feature_columns, config)
+        else:
+            print("   - Feature importances non disponibles pour ce type de modele")
 
     # --- Matrices PNG ---
     _save_confusion_matrix_images(
@@ -86,35 +97,55 @@ def evaluate_and_report(
     )
 
 
-def _report_feature_importances(model, feature_columns: list, config: ModelConfig) -> None:
-    """
-    Affiche le top-20 des features et sauvegarde un barplot.
-    Utile pour detecter les biais : si Age_normalized pese 40%,
-    le modele se base trop sur les profils synthetiques.
-    """
-    # Moyenne des importances sur les deux estimateurs (maladie + specialiste)
-    importances = np.zeros(len(feature_columns))
-    for est in model.estimators_:
-        importances += est.feature_importances_
-    importances /= len(model.estimators_)
+def _try_extract_importances(model, n_features: int):
+    """Tente d'extraire les importances selon le type de modele."""
+    # RandomForest / XGBoost direct
+    if hasattr(model, 'feature_importances_'):
+        return model.feature_importances_
+    # MultiOutputClassifier wrapping des estimateurs avec feature_importances_
+    if hasattr(model, 'estimators_'):
+        importances = np.zeros(n_features)
+        count = 0
+        for est in model.estimators_:
+            if hasattr(est, 'feature_importances_'):
+                importances += est.feature_importances_
+                count += 1
+        if count > 0:
+            return importances / count
+    return None
 
+
+def _report_feature_importances(importances: np.ndarray, feature_columns: list, config: ModelConfig) -> None:
     sorted_idx = np.argsort(importances)[::-1]
     top_n = 20
 
     print(f"\n   --- Top-{top_n} Feature Importances ---")
 
-    symptom_weight = sum(importances[i] for i in range(len(feature_columns))
-                         if not _is_profile_feature(feature_columns[i]))
-    profile_weight = 1.0 - symptom_weight
+    symptom_weight = 0.0
+    profile_weight = 0.0
+    interaction_weight = 0.0
+    for i, col in enumerate(feature_columns):
+        if _is_interaction_feature(col):
+            interaction_weight += importances[i]
+        elif _is_profile_feature(col):
+            profile_weight += importances[i]
+        else:
+            symptom_weight += importances[i]
 
-    print(f"   Poids total symptomes:  {symptom_weight*100:.1f}%")
-    print(f"   Poids total profil:     {profile_weight*100:.1f}%")
+    print(f"   Poids total symptomes (TF-IDF):   {symptom_weight*100:.1f}%")
+    print(f"   Poids total profil:               {profile_weight*100:.1f}%")
+    print(f"   Poids total interactions:          {interaction_weight*100:.1f}%")
     if profile_weight > 0.5:
         print("   /!\\ ATTENTION : le profil pese plus de 50%, risque de biais")
 
     for rank in range(min(top_n, len(feature_columns))):
         idx = sorted_idx[rank]
-        print(f"   {rank+1:2d}. {feature_columns[idx]:40s} {importances[idx]*100:.2f}%")
+        tag = ""
+        if _is_interaction_feature(feature_columns[idx]):
+            tag = " [IX]"
+        elif _is_profile_feature(feature_columns[idx]):
+            tag = " [profil]"
+        print(f"   {rank+1:2d}. {feature_columns[idx]:45s} {importances[idx]*100:.2f}%{tag}")
 
     try:
         import matplotlib.pyplot as plt
@@ -122,12 +153,20 @@ def _report_feature_importances(model, feature_columns: list, config: ModelConfi
         top_indices = sorted_idx[:top_n]
         top_names = [feature_columns[i] for i in top_indices]
         top_values = [importances[i] * 100 for i in top_indices]
-        colors = ['#2196F3' if not _is_profile_feature(n) else '#FF9800' for n in top_names]
+
+        def _color(name):
+            if _is_interaction_feature(name):
+                return '#4CAF50'
+            elif _is_profile_feature(name):
+                return '#FF9800'
+            return '#2196F3'
+
+        colors = [_color(n) for n in top_names]
         ax.barh(range(top_n), top_values[::-1], color=colors[::-1])
         ax.set_yticks(range(top_n))
         ax.set_yticklabels(top_names[::-1], fontsize=8)
         ax.set_xlabel('Importance (%)')
-        ax.set_title('Top-20 Feature Importances (bleu=symptome, orange=profil)')
+        ax.set_title('Top-20 Feature Importances (bleu=symptome, orange=profil, vert=interaction)')
         plt.tight_layout()
         path = os.path.join(config.MODELS_DIR, 'feature_importances.png')
         plt.savefig(path, dpi=150, bbox_inches='tight')

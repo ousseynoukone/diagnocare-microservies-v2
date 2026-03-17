@@ -28,6 +28,7 @@ class ModelConfig:
         self.MODEL_FILES = {
             'model': 'model.joblib',
             'mlb': 'mlb.joblib',
+            'tfidf': 'tfidf.joblib',
             'scaler': 'scaler.joblib',
             'le_disease': 'le_disease.joblib',
             'le_specialist': 'le_specialist.joblib',

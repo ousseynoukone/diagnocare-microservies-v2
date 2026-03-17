@@ -55,10 +55,12 @@ This directory contains comprehensive technical documentation for the DiagnoCare
 ### 6. [ML Prediction Service](06-ml-prediction-service.md)
 **Machine Learning service documentation**
 - Flask architecture
-- Prediction endpoints
-- Model loading and training (outside container)
-- Confusion matrices and evaluation
-- Translation service
+- XGBoost model with TF-IDF symptom encoding
+- Feature interactions (profile x key symptoms)
+- Isotonic probability calibration
+- Training pipeline (outside container)
+- Confusion matrices and evaluation metrics
+- Translation service (en/fr)
 - NLP extraction
 
 ### 7. [API Endpoints](07-api-endpoints.md)
@@ -228,6 +230,6 @@ For questions or updates:
 
 ---
 
-**Last Updated**: March 2025  
-**Version**: 1.1  
+**Last Updated**: March 2026  
+**Version**: 2.0  
 **Maintained By**: Development Team

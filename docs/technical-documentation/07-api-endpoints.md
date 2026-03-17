@@ -52,7 +52,7 @@ Delete user account
 ### Predictions
 
 #### POST `/api/v1/diagnocare/predictions`
-Create prediction. **Body**: `userId` (long), `symptomLabels` (array of strings). Optional medical profile is loaded from the user; no `symptomIds` or raw description in the request.
+Create prediction. **Body**: `userId` (long), `symptomLabels` (array of strings). Optional medical profile is loaded from the user; no `symptomIds` or raw description in the request. Response includes `confidence_level` (`high`, `moderate`, `low`) and an optional `confidence_note` from the ML model (calibrated XGBoost + TF-IDF).
 
 #### GET `/api/v1/diagnocare/predictions/{id}`
 Get prediction by ID

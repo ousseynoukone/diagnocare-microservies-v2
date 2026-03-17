@@ -5,17 +5,19 @@ Pipeline :
   1. Lire le CSV symptomes/maladies
   2. Nettoyer les libelles de symptomes
   3. Data augmentation (light + heavy drop de symptomes)
-  4. Encoder les symptomes en matrice binaire (MultiLabelBinarizer)
+  4. Encoder les symptomes via TF-IDF (poids les symptomes rares plus fort)
   5. Generer des profils patients synthetiques
   6. Mapper maladie -> specialiste (avec correction des doublons/typos)
-  7. Construire la matrice de features (symptomes binaires + numeriques + one-hot)
-  8. Encoder les cibles (maladie + specialiste)
+  7. Creer des feature interactions (profil x symptomes cles)
+  8. Construire la matrice de features finale
+  9. Encoder les cibles (maladie + specialiste)
 """
 import os
 import sys
 import pandas as pd
 import numpy as np
 from sklearn.preprocessing import MultiLabelBinarizer, LabelEncoder, StandardScaler
+from sklearn.feature_extraction.text import TfidfVectorizer
 from typing import Tuple, Any
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -27,18 +29,19 @@ from data_cleaning import clean_specialist_label
 from data_augmentation import augment_symptom_lists
 
 
+# Symptomes "cles" : ceux qui, croises avec le profil, sont medicalement pertinents
+KEY_SYMPTOMS_FOR_INTERACTIONS = [
+    'chest_pain', 'breathlessness', 'high_fever', 'fatigue',
+    'weight_loss', 'weight_gain', 'headache', 'joint_pain',
+    'skin_rash', 'vomiting', 'dizziness', 'sweating',
+]
+
+
 def prepare_data(
     config: ModelConfig,
     text_utils: TextUtils,
     profile_generator: Any,
-) -> Tuple[pd.DataFrame, np.ndarray, MultiLabelBinarizer, StandardScaler, LabelEncoder, LabelEncoder, pd.DataFrame, list]:
-    """
-    Charge le dataset, nettoie, augmente, construit les features et les cibles.
-
-    Returns:
-        df_features, Y_combined, mlb, scaler, le_disease, le_specialist,
-        df_filtered, feature_columns
-    """
+) -> Tuple[pd.DataFrame, np.ndarray, Any, StandardScaler, LabelEncoder, LabelEncoder, pd.DataFrame, list]:
     dataset_path = os.path.join(config.DATA_DIR, 'dataset.csv')
     mapping_path = os.path.join(config.DATA_DIR, 'Doctor_Versus_Disease.csv')
 
@@ -79,12 +82,27 @@ def prepare_data(
 
     df_aug = pd.DataFrame({'Disease': diseases_series})
 
-    # ---- 4. Encodage binaire (multi-label) ----
-    print("\n4. Encodage binaire des symptomes (MultiLabelBinarizer)...")
+    # ---- 4. TF-IDF sur les symptomes ----
+    # On joint les symptomes en "phrase" pour TfidfVectorizer.
+    # TF-IDF reduit le poids de "fatigue" (present partout) et booste
+    # "silver_like_dusting" (quasi-exclusif au Psoriasis).
+    print("\n4. Encodage TF-IDF des symptomes...")
+    symptom_docs = [' '.join(s) for s in symptom_lists]
+    tfidf = TfidfVectorizer(
+        analyzer='word',
+        token_pattern=r'[a-z_]+',
+        use_idf=True,
+        norm='l2',
+        sublinear_tf=True,
+    )
+    X_symptoms = tfidf.fit_transform(symptom_docs)
+    symptom_feature_names = tfidf.get_feature_names_out().tolist()
+    df_symptoms = pd.DataFrame(X_symptoms.toarray(), columns=symptom_feature_names)
+    print(f"   - {len(symptom_feature_names)} symptomes encodes en TF-IDF")
+
+    # On garde aussi le MLB pour que le service sache quels symptomes sont valides
     mlb = MultiLabelBinarizer()
-    X_symptoms = mlb.fit_transform(symptom_lists)
-    df_symptoms = pd.DataFrame(X_symptoms, columns=mlb.classes_)
-    print(f"   - {len(mlb.classes_)} symptomes uniques encodes")
+    mlb.fit(symptom_lists)
 
     # ---- 5. Profils patients synthetiques ----
     print("\n5. Generation de profils patients synthetiques...")
@@ -111,8 +129,14 @@ def prepare_data(
     df_profiles = df_profiles.iloc[valid_idx].reset_index(drop=True)
     df_aug = df_aug.reset_index(drop=True)
 
-    # ---- 7. Construction des features ----
-    print("\n7. Construction de la matrice de features...")
+    # ---- 7. Feature interactions (profil x symptomes cles) ----
+    # "chest_pain chez un homme de 60 ans fumeur" != "chest_pain chez une femme de 20 ans"
+    print("\n7. Creation des feature interactions (profil x symptomes)...")
+    df_interactions = _build_interactions(df_symptoms, df_profiles, symptom_feature_names)
+    print(f"   - {df_interactions.shape[1]} features d'interaction creees")
+
+    # ---- 8. Construction des features ----
+    print("\n8. Construction de la matrice de features...")
 
     numerical_cols = ['Age', 'Weight', 'BMI', 'Tension_Moyenne', 'Cholesterole_Moyen']
     scaler = StandardScaler()
@@ -128,11 +152,11 @@ def prepare_data(
     ]
     df_categorical = pd.get_dummies(df_profiles[categorical_cols], prefix=categorical_cols)
 
-    df_features = pd.concat([df_symptoms, df_numerical, df_categorical], axis=1)
+    df_features = pd.concat([df_symptoms, df_numerical, df_categorical, df_interactions], axis=1)
     feature_columns = df_features.columns.tolist()
     print(f"   - Forme finale: {df_features.shape}")
 
-    # ---- 8. Encodage des cibles ----
+    # ---- 9. Encodage des cibles ----
     le_disease = LabelEncoder()
     le_specialist = LabelEncoder()
     y_disease = le_disease.fit_transform(df_aug['Disease'])
@@ -142,10 +166,44 @@ def prepare_data(
     return (
         df_features,
         Y_combined,
-        mlb,
+        (mlb, tfidf),  # on retourne les deux : mlb pour validation, tfidf pour encoding
         scaler,
         le_disease,
         le_specialist,
         df_aug,
         feature_columns,
     )
+
+
+def _build_interactions(
+    df_symptoms: pd.DataFrame,
+    df_profiles: pd.DataFrame,
+    symptom_feature_names: list,
+) -> pd.DataFrame:
+    """
+    Croise les symptomes cles avec les variables de profil numeriques.
+    Exemple : Age_normalized * chest_pain_tfidf
+    -> un score eleve signifie "patient age AVEC chest_pain" (signal cardiaque fort)
+    """
+    interactions = {}
+
+    age_norm = (df_profiles['Age'] - df_profiles['Age'].mean()) / (df_profiles['Age'].std() + 1e-8)
+    is_male = (df_profiles['Gender'] == 'Male').astype(float)
+    is_smoker = (df_profiles['Smoking'] == 'Yes').astype(float)
+    bp_high = (df_profiles['Blood Pressure'] == 'High').astype(float)
+
+    profile_signals = {
+        'age': age_norm,
+        'male': is_male,
+        'smoker': is_smoker,
+        'bp_high': bp_high,
+    }
+
+    for symptom in KEY_SYMPTOMS_FOR_INTERACTIONS:
+        if symptom not in symptom_feature_names:
+            continue
+        s_values = df_symptoms[symptom].values
+        for pname, pvalues in profile_signals.items():
+            interactions[f'IX_{symptom}_x_{pname}'] = s_values * pvalues.values
+
+    return pd.DataFrame(interactions)

@@ -76,6 +76,11 @@ class ModelRepository:
         return self.get_model('mlb')
     
     @property
+    def tfidf(self):
+        """Raccourci pour accéder au TfidfVectorizer"""
+        return self.get_model('tfidf')
+    
+    @property
     def scaler(self):
         """Raccourci pour accéder au StandardScaler"""
         return self.get_model('scaler')

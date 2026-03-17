@@ -33,9 +33,23 @@ This document lists the datasets and literature used for the ML prediction model
 
 ## Usage in this service
 
-- **Symptom–disease data** and **patient profile**-style features are derived from the datasets above.
-- **Disease → specialist** mapping comes from the doctor specialist recommendation dataset (e.g. `Doctor_Versus_Disease.csv`).
+- **Symptom-disease data** and **patient profile**-style features are derived from the datasets above.
+- **Disease -> specialist** mapping comes from the doctor specialist recommendation dataset (e.g. `Doctor_Versus_Disease.csv`).
 - **Synthetic patient profiles** (age, BP, cholesterol, etc.) are generated in `training/profile_generator.py` for training; they are consistent with typical demographics per disease type.
 - The literature sources support the methodological and medical context of symptom-based prediction and specialist recommendation.
 
+---
+
+## ML techniques used
+
+| Technique | Purpose | Library |
+|-----------|---------|---------|
+| TF-IDF | Weight rare symptoms higher than common ones | scikit-learn `TfidfVectorizer` |
+| XGBoost | Gradient boosting that handles sparse/missing data natively | `xgboost` |
+| Feature interactions | Cross profile signals (age, gender, smoking, BP) with key symptoms | Manual feature engineering |
+| Isotonic calibration | Align predicted probabilities with observed accuracy | scikit-learn `CalibratedClassifierCV` |
+| Data augmentation | Simulate incomplete symptom input (light/heavy drop) | Custom (`data_augmentation.py`) |
+| Label cleaning | Normalise specialist labels (typos, casing, duplicates) | Custom (`data_cleaning.py`) |
+
 For training instructions, see [BUILD.md](BUILD.md).
+For full model documentation, see `docs/technical-documentation/06-ml-prediction-service.md`.

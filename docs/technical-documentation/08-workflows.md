@@ -77,8 +77,10 @@ sequenceDiagram
     DiagnoCareService->>DiagnoCareService: Resolve symptoms
     DiagnoCareService->>DiagnoDB: Get patient profile
     DiagnoCareService->>MLService: POST /predict (symptoms + profile)
-    MLService->>MLService: Load model & predict
-    MLService-->>DiagnoCareService: Top 5 predictions
+    MLService->>MLService: TF-IDF encode symptoms
+    MLService->>MLService: Build feature interactions (profile x symptoms)
+    MLService->>MLService: Run calibrated XGBoost prediction
+    MLService-->>DiagnoCareService: Top 5 predictions + confidence_level
     DiagnoCareService->>DiagnoCareService: Detect red alerts
     DiagnoCareService->>DiagnoDB: Save prediction
     DiagnoCareService->>DiagnoDB: Save pathology results
@@ -93,9 +95,10 @@ sequenceDiagram
 1. **User submits symptoms** via `symptomLabels` only (array of strings; no symptom IDs or raw description).
 2. **Use symptom labels** directly for the ML request
 3. **Get patient medical profile** (or use defaults)
-4. **Build ML request** with symptoms and profile
-5. **Call ML service** for predictions
+4. **Build ML request** with symptoms and profile (age, gender, smoking, BP, cholesterol, etc.)
+5. **Call ML service** for predictions (TF-IDF encoding, feature interactions, calibrated XGBoost)
 6. **Process ML response**:
+   - Check `confidence_level` (high/moderate/low) based on calibrated probability
    - Detect red alerts (urgent diseases; matching uses the English disease name from the ML response)
    - Calculate best score
    - Create pathology results (top 3)
