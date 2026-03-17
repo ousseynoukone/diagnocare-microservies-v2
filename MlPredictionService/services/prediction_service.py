@@ -151,10 +151,30 @@ class PredictionService:
             "profile_used": profile_data
         }
         
+        # Seuil de confiance : si la proba max est trop basse, on prévient le client
+        top_prob = disease_probs[top_diseases_indices[0]] * 100
+        if top_prob < 20:
+            confidence_level = "low"
+            confidence_note = (
+                "La confiance du modèle est faible. Veuillez préciser vos symptômes "
+                "ou consulter un médecin pour un diagnostic fiable."
+            )
+        elif top_prob < 40:
+            confidence_level = "moderate"
+            confidence_note = (
+                "Plusieurs pathologies sont possibles avec des probabilités proches. "
+                "Les résultats ci-dessous sont indicatifs."
+            )
+        else:
+            confidence_level = "high"
+            confidence_note = None
+
         return PredictionResponse(
             predictions=results,
             language=request.language,
-            metadata=metadata
+            metadata=metadata,
+            confidence_level=confidence_level,
+            confidence_note=confidence_note,
         )
     
     def _prepare_profile_data(self, request: PredictionRequest) -> Dict:

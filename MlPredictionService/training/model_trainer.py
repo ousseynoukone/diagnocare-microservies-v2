@@ -67,9 +67,10 @@ class ModelTrainer:
         )
         model.fit(X_train, Y_train)
 
-        # --- Métriques, rapports et matrices de confusion (texte + images) ---
+        # --- Métriques, rapports, matrices de confusion et feature importances ---
         evaluate_and_report(
-            model, X_test, Y_test, le_disease, le_specialist, self.config
+            model, X_test, Y_test, le_disease, le_specialist, self.config,
+            feature_columns=feature_columns,
         )
 
         # --- Sauvegarde de tout ce dont l’API a besoin pour l’inférence ---

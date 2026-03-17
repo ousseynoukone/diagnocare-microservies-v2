@@ -52,11 +52,17 @@ class PredictionResponse:
     predictions: List[PredictionResult]
     language: str
     metadata: Dict[str, any]
+    confidence_level: str = "high"
+    confidence_note: Optional[str] = None
     
     def to_dict(self) -> dict:
         """Convertit en dictionnaire pour la réponse JSON"""
-        return {
+        result = {
             "predictions": [pred.to_dict() for pred in self.predictions],
             "language": self.language,
-            "metadata": self.metadata
+            "metadata": self.metadata,
+            "confidence_level": self.confidence_level,
         }
+        if self.confidence_note:
+            result["confidence_note"] = self.confidence_note
+        return result
