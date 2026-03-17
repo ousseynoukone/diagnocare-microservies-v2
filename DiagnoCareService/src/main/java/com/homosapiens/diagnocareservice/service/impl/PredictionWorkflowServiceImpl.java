@@ -85,7 +85,9 @@ public class PredictionWorkflowServiceImpl implements PredictionWorkflowService 
                    .bmi((float) profile.getBmi())
                    .tension_moyenne(profile.getMeanBloodPressure())
                    .cholesterole_moyen(profile.getMeanCholesterol())
-                   .gender(profile.getGender() != null ? profile.getGender().name() : "Male")
+                   .gender(profile.getGender() != null
+                           ? profile.getGender().name().substring(0, 1) + profile.getGender().name().substring(1).toLowerCase()
+                           : "Male")
                    .smoking(profile.getIsSmoking() != null && profile.getIsSmoking() ? "Yes" : "No")
                    .alcohol(profile.getAlcohol() != null && profile.getAlcohol() ? "Moderate" : "None")
                    .sedentarite(profile.getSedentary() != null && profile.getSedentary() ? "High" : "Moderate")

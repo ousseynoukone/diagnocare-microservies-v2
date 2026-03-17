@@ -1,13 +1,15 @@
 """
-Chargement des données et construction des features pour l'entraînement.
+Chargement des donnees et construction des features pour l'entrainement.
 
 Pipeline :
-  1. Lire le CSV symptômes/maladies
-  2. Nettoyer les libellés de symptômes
-  3. Data augmentation (retrait aléatoire de symptômes → robustesse)
-  4. Générer des profils patients synthétiques
-  5. Mapper maladie → spécialiste (avec correction des doublons/typos)
-  6. Construire la matrice de features (symptômes binaires + numériques + one-hot)
+  1. Lire le CSV symptomes/maladies
+  2. Nettoyer les libelles de symptomes
+  3. Data augmentation (light + heavy drop de symptomes)
+  4. Encoder les symptomes en matrice binaire (MultiLabelBinarizer)
+  5. Generer des profils patients synthetiques
+  6. Mapper maladie -> specialiste (avec correction des doublons/typos)
+  7. Construire la matrice de features (symptomes binaires + numeriques + one-hot)
+  8. Encoder les cibles (maladie + specialiste)
 """
 import os
 import sys
@@ -45,10 +47,10 @@ def prepare_data(
     df = pd.read_csv(dataset_path)
     df.columns = df.columns.str.strip()
     symptom_cols = [c for c in df.columns if 'Symptom' in c]
-    print(f"   - {len(symptom_cols)} colonnes de symptômes trouvées")
+    print(f"   - {len(symptom_cols)} colonnes de symptomes trouvees")
 
-    # ---- 2. Nettoyage des symptômes ----
-    print("\n2. Traitement des symptômes (nettoyage des libellés)...")
+    # ---- 2. Nettoyage des symptomes ----
+    print("\n2. Nettoyage des libelles de symptomes...")
     symptom_lists = []
     for _, row in df.iterrows():
         cleaned = [
@@ -60,55 +62,58 @@ def prepare_data(
 
     original_count = len(symptom_lists)
 
-    # ---- 3. Data augmentation (symptômes manquants simulés) ----
-    print("\n3. Data augmentation (simulation de symptômes manquants)...")
+    # ---- 3. Data augmentation (light + heavy drop) ----
+    print("\n3. Data augmentation (simulation de saisies incompletes)...")
     symptom_lists, diseases_series = augment_symptom_lists(
         symptom_lists,
         df['Disease'],
-        n_augmented_copies=3,
-        max_drop=2,
+        n_light_copies=2,
+        max_light_drop=2,
+        n_heavy_copies=1,
+        keep_min=2,
+        keep_max=3,
         random_seed=42,
     )
     augmented_count = len(symptom_lists) - original_count
-    print(f"   - {original_count} originaux + {augmented_count} augmentés = {len(symptom_lists)} total")
+    print(f"   - {original_count} originaux + {augmented_count} augmentes = {len(symptom_lists)} total")
 
-    # Reconstruire un dataframe aligné (Disease + Disease_clean)
     df_aug = pd.DataFrame({'Disease': diseases_series})
 
     # ---- 4. Encodage binaire (multi-label) ----
+    print("\n4. Encodage binaire des symptomes (MultiLabelBinarizer)...")
     mlb = MultiLabelBinarizer()
     X_symptoms = mlb.fit_transform(symptom_lists)
     df_symptoms = pd.DataFrame(X_symptoms, columns=mlb.classes_)
-    print(f"   - {len(mlb.classes_)} symptômes uniques encodés")
+    print(f"   - {len(mlb.classes_)} symptomes uniques encodes")
 
-    # ---- 5. Profils patients synthétiques ----
-    print("\n4. Génération de profils patients synthétiques...")
+    # ---- 5. Profils patients synthetiques ----
+    print("\n5. Generation de profils patients synthetiques...")
     profiles = [profile_generator.generate(disease) for disease in df_aug['Disease']]
     df_profiles = pd.DataFrame(profiles)
 
-    # ---- 6. Mapping maladie → spécialiste (avec nettoyage des doublons) ----
-    print("\n5. Mapping Maladie -> Spécialiste (nettoyage des labels)...")
+    # ---- 6. Mapping maladie -> specialiste ----
+    print("\n6. Mapping Maladie -> Specialiste (nettoyage des labels)...")
     df_map = pd.read_csv(mapping_path, header=None, names=['Disease', 'Specialist'], encoding='cp1252')
     df_map['Disease_clean'] = df_map['Disease'].apply(text_utils.clean_text)
     df_map['Specialist'] = df_map['Specialist'].apply(clean_specialist_label)
     mapping_dict = dict(zip(df_map['Disease_clean'], df_map['Specialist']))
 
-    # Afficher les corrections effectuées
     unique_specialists = sorted(set(df_map['Specialist']))
-    print(f"   - {len(unique_specialists)} spécialistes uniques après nettoyage: {unique_specialists}")
+    print(f"   - {len(unique_specialists)} specialistes uniques apres nettoyage: {unique_specialists}")
 
     df_aug['Disease_clean'] = df_aug['Disease'].apply(text_utils.clean_text)
     df_aug['Target_Specialist'] = df_aug['Disease_clean'].map(mapping_dict)
     df_aug = df_aug[df_aug['Target_Specialist'].notna()].copy()
-    print(f"   - {len(df_aug)} échantillons appariés avec des spécialistes")
+    print(f"   - {len(df_aug)} echantillons apparies avec des specialistes")
 
-    # Réindexer tout sur les lignes conservées
     valid_idx = df_aug.index
     df_symptoms = df_symptoms.iloc[valid_idx].reset_index(drop=True)
     df_profiles = df_profiles.iloc[valid_idx].reset_index(drop=True)
     df_aug = df_aug.reset_index(drop=True)
 
-    # ---- 7. Features numériques normalisées ----
+    # ---- 7. Construction des features ----
+    print("\n7. Construction de la matrice de features...")
+
     numerical_cols = ['Age', 'Weight', 'BMI', 'Tension_Moyenne', 'Cholesterole_Moyen']
     scaler = StandardScaler()
     numerical_normalized = scaler.fit_transform(df_profiles[numerical_cols])
@@ -117,20 +122,17 @@ def prepare_data(
         columns=[f'{col}_normalized' for col in numerical_cols]
     )
 
-    # ---- 8. One-hot sur les catégorielles ----
     categorical_cols = [
         'Gender', 'Blood Pressure', 'Cholesterol Level', 'Outcome Variable',
         'Smoking', 'Alcohol', 'Sedentarite', 'Family_History'
     ]
     df_categorical = pd.get_dummies(df_profiles[categorical_cols], prefix=categorical_cols)
 
-    # ---- 9. Assemblage final ----
-    print("\n6. Combinaison des features...")
     df_features = pd.concat([df_symptoms, df_numerical, df_categorical], axis=1)
     feature_columns = df_features.columns.tolist()
-    print(f"   - Forme finale des features: {df_features.shape}")
+    print(f"   - Forme finale: {df_features.shape}")
 
-    # ---- 10. Cibles encodées ----
+    # ---- 8. Encodage des cibles ----
     le_disease = LabelEncoder()
     le_specialist = LabelEncoder()
     y_disease = le_disease.fit_transform(df_aug['Disease'])

@@ -49,7 +49,7 @@ class ModelTrainer:
         ) = prepare_data(self.config, self.text_utils, self.profile_generator)
 
         # --- Split stratifié par maladie (pour avoir les mêmes proportions en train et test) ---
-        print("\n6. Entraînement du modèle (split stratifié par maladie)...")
+        print("\n8. Entrainement du modele (split stratifie par maladie)...")
         y_disease_only = df_filtered['Disease'].values
         X_train, X_test, Y_train, Y_test = train_test_split(
             df_features, Y_combined, test_size=0.2, random_state=42, stratify=y_disease_only
@@ -74,7 +74,7 @@ class ModelTrainer:
         )
 
         # --- Sauvegarde de tout ce dont l’API a besoin pour l’inférence ---
-        print("\n7. Sauvegarde des artefacts...")
+        print("\n9. Sauvegarde des artefacts...")
         os.makedirs(self.config.MODELS_DIR, exist_ok=True)
         joblib.dump(model, self.config.get_model_path('model'))
         joblib.dump(mlb, self.config.get_model_path('mlb'))
@@ -82,4 +82,4 @@ class ModelTrainer:
         joblib.dump(le_disease, self.config.get_model_path('le_disease'))
         joblib.dump(le_specialist, self.config.get_model_path('le_specialist'))
         joblib.dump(feature_columns, self.config.get_model_path('feature_columns'))
-        print(f"   - Tous les artefacts sauvegardés dans {self.config.MODELS_DIR}/")
+        print(f"   - Tous les artefacts sauvegardes dans {self.config.MODELS_DIR}/")
