@@ -141,13 +141,13 @@ class PredictionService:
         }
 
         top_prob = disease_probs[top_diseases_indices[0]] * 100
-        if top_prob < 20:
+        if top_prob < 40:
             confidence_level = "low"
             confidence_note = (
                 "La confiance du modele est faible. Veuillez preciser vos symptomes "
                 "ou consulter un medecin pour un diagnostic fiable."
             )
-        elif top_prob < 40:
+        elif top_prob < 70:
             confidence_level = "moderate"
             confidence_note = (
                 "Plusieurs pathologies sont possibles avec des probabilites proches. "

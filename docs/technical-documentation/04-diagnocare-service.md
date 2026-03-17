@@ -623,9 +623,9 @@ private CheckInOutcome determineOutcome(Prediction previous, Prediction newPredi
 **Confidence levels** (based on calibrated top-1 probability):
 | Level | Condition | Meaning |
 |-------|-----------|---------|
-| `high` | ≥ 40% | Strong prediction |
-| `moderate` | 20-40% | Multiple pathologies possible |
-| `low` | < 20% | Insufficient symptoms, user should provide more details |
+| `high` | > 70% | Strong prediction |
+| `moderate` | 40-70% | Multiple pathologies possible |
+| `low` | < 40% | Insufficient symptoms, user should provide more details |
 
 **Model**: Calibrated XGBoost with TF-IDF symptom encoding and feature interactions (profile × key symptoms). See [ML Prediction Service](06-ml-prediction-service.md) for details.
 

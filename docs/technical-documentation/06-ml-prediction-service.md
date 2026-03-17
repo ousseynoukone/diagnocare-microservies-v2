@@ -227,11 +227,11 @@ python training/train_model.py
       "disease": "Heart attack",
       "disease_en": "Heart attack",
       "disease_fr": "Crise cardiaque",
-      "probability": 100.0,
+      "probability": 87.3,
       "specialist": "Cardiologist",
       "specialist_en": "Cardiologist",
       "specialist_fr": "Cardiologue",
-      "specialist_probability": 100.0,
+      "specialist_probability": 84.1,
       "description": "..."
     }
   ],
@@ -248,9 +248,9 @@ python training/train_model.py
 **Confidence levels**:
 | Level | Condition | Note |
 |-------|-----------|------|
-| `high` | top probability ≥ 40% | No note |
-| `moderate` | 20% ≤ top probability < 40% | "Plusieurs pathologies possibles..." |
-| `low` | top probability < 20% | "Veuillez preciser vos symptomes..." |
+| `high` | top probability > 70% | No note |
+| `moderate` | 40% ≤ top probability ≤ 70% | "Plusieurs pathologies possibles..." |
+| `low` | top probability < 40% | "Veuillez preciser vos symptomes..." |
 
 ### GET `/health`
 **Purpose**: Health check endpoint  
