@@ -52,7 +52,7 @@ Delete user account
 ### Predictions
 
 #### POST `/api/v1/diagnocare/predictions`
-Create prediction
+Create prediction. **Body**: `userId` (long), `symptomLabels` (array of strings). Optional medical profile is loaded from the user; no `symptomIds` or raw description in the request.
 
 #### GET `/api/v1/diagnocare/predictions/{id}`
 Get prediction by ID
@@ -71,8 +71,7 @@ Get red alert predictions
 
 ### Symptoms
 
-#### POST `/api/v1/diagnocare/symptoms`
-Create symptom
+Symptoms are managed by the ML pipeline and metadata; the API exposes read and delete only (no create/update).
 
 #### GET `/api/v1/diagnocare/symptoms`
 List all symptoms
@@ -80,19 +79,19 @@ List all symptoms
 #### GET `/api/v1/diagnocare/symptoms/{id}`
 Get symptom by ID
 
-#### PUT `/api/v1/diagnocare/symptoms/{id}`
-Update symptom
-
 #### DELETE `/api/v1/diagnocare/symptoms/{id}`
 Delete symptom
 
 #### GET `/api/v1/diagnocare/symptoms/search?label={query}`
-Search symptoms
+Search symptoms by label
+
+#### GET `/api/v1/diagnocare/symptoms/ml-metadata`
+Get ML symptoms metadata (labels and translations from the ML service)
 
 ### Check-Ins
 
 #### POST `/api/v1/diagnocare/check-ins`
-Submit check-in
+Submit check-in. **Body**: `userId`, `previousPredictionId`, `symptomLabels` (array of strings). No `symptomIds` in the request.
 
 #### GET `/api/v1/diagnocare/check-ins?userId={userId}`
 Get user check-ins
@@ -109,7 +108,7 @@ Update user
 Delete user
 
 #### GET `/api/v1/diagnocare/users/{id}/export`
-Export user data (GDPR)
+Export user data (GDPR). Response is **raw JSON** (not wrapped in the usual `{ data, message, statusCode }` envelope).
 
 ### Medical Profiles
 

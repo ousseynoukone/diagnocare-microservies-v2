@@ -56,7 +56,8 @@ This directory contains comprehensive technical documentation for the DiagnoCare
 **Machine Learning service documentation**
 - Flask architecture
 - Prediction endpoints
-- Model loading
+- Model loading and training (outside container)
+- Confusion matrices and evaluation
 - Translation service
 - NLP extraction
 
@@ -227,6 +228,6 @@ For questions or updates:
 
 ---
 
-**Last Updated**: March 2024  
-**Version**: 1.0  
+**Last Updated**: March 2025  
+**Version**: 1.1  
 **Maintained By**: Development Team

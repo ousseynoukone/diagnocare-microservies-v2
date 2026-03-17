@@ -60,7 +60,7 @@ DiagnoCare implements GDPR compliance features including consent management, dat
 - All check-ins
 - All reports
 
-**Format**: JSON
+**Format**: JSON. The response body is **raw JSON** (not wrapped in the standard API envelope `{ data, message, statusCode }`), so clients can parse the export object directly.
 
 **Purpose**: GDPR Article 15 (Right of access)
 

@@ -110,9 +110,9 @@ com.homosapiens.diagnocareservice/
 ## Core Features
 
 ### 1. Symptom Management
-- Create, update, delete symptoms
-- Search symptoms by label
-- Symptom catalog management
+- List, get by ID, search by label, delete symptoms
+- Symptoms are created/updated by the ML pipeline and metadata; the API does not expose POST or PUT for symptoms
+- `GET /symptoms/ml-metadata` returns symptom labels and translations from the ML service
 
 ### 2. Disease Prediction
 - ML-based prediction from symptoms
@@ -153,15 +153,14 @@ http://localhost:8765/api/v1/diagnocare
 #### POST `/predictions`
 **Purpose**: Create a new disease prediction
 
-**Request Body**:
+**Request Body** (only `userId` and `symptomLabels`):
 ```json
 {
   "userId": 1,
-  "rawDescription": "I have fever, cough, and fatigue",
-  "symptomIds": [1, 2, 3],
   "symptomLabels": ["fever", "cough", "fatigue"]
 }
 ```
+The patient medical profile is loaded from the user; no `symptomIds` or raw description in the request.
 
 **Response**: `201 Created`
 ```json
@@ -211,8 +210,7 @@ http://localhost:8765/api/v1/diagnocare
 
 ### Symptom Endpoints
 
-#### POST `/symptoms`
-**Purpose**: Create symptom
+Symptoms are read-only from the API perspective (create/update come from ML and metadata). Only read and delete are exposed.
 
 #### GET `/symptoms`
 **Purpose**: List all symptoms
@@ -220,29 +218,29 @@ http://localhost:8765/api/v1/diagnocare
 #### GET `/symptoms/{id}`
 **Purpose**: Get symptom by ID
 
-#### PUT `/symptoms/{id}`
-**Purpose**: Update symptom
-
 #### DELETE `/symptoms/{id}`
 **Purpose**: Delete symptom
 
 #### GET `/symptoms/search?label={query}`
 **Purpose**: Search symptoms by label
 
+#### GET `/symptoms/ml-metadata`
+**Purpose**: Get ML symptoms metadata (labels and translations from the ML service)
+
 ### Check-In Endpoints
 
 #### POST `/check-ins`
 **Purpose**: Submit check-in and create follow-up prediction
 
-**Request Body**:
+**Request Body** (only `userId`, `previousPredictionId`, `symptomLabels`):
 ```json
 {
   "userId": 1,
   "previousPredictionId": 1,
-  "symptomIds": [1, 2],
   "symptomLabels": ["fever", "cough"]
 }
 ```
+No `symptomIds` in the request.
 
 **Response**: `201 Created`
 ```json
@@ -272,7 +270,7 @@ http://localhost:8765/api/v1/diagnocare
 #### GET `/users/{id}/export`
 **Purpose**: Export all user data (GDPR)
 
-**Response**: `200 OK`
+**Response**: `200 OK` — **raw JSON** (not wrapped in the usual `{ data, message, statusCode }` envelope). The body is the export object directly, e.g.:
 ```json
 {
   "userId": 1,
@@ -330,13 +328,8 @@ sequenceDiagram
     PredictionController->>PredictionWorkflowService: createPrediction(dto)
     
     PredictionWorkflowService->>PredictionWorkflowService: Resolve symptoms
-    alt Symptom IDs provided
-        PredictionWorkflowService->>DiagnoDB: Find symptoms by IDs
-    else Symptom labels provided
-        PredictionWorkflowService->>PredictionWorkflowService: Use labels directly
-    else Raw description provided
-        PredictionWorkflowService->>PredictionWorkflowService: Extract via NLP (future)
-    end
+    Note over PredictionWorkflowService: Request provides symptomLabels only
+    PredictionWorkflowService->>PredictionWorkflowService: Use symptom labels directly
     
     PredictionWorkflowService->>DiagnoDB: Get patient medical profile
     PredictionWorkflowService->>PredictionWorkflowService: Build ML request
@@ -371,9 +364,7 @@ sequenceDiagram
 ### Step-by-Step Process
 
 1. **Symptom Resolution**:
-   - If `symptomIds` provided → Fetch from database
-   - If `symptomLabels` provided → Use directly
-   - If `rawDescription` provided → Extract via NLP (future)
+   - The request provides `symptomLabels` only; they are used directly for the ML call (no symptom IDs or raw description).
 
 2. **Profile Retrieval**:
    - Get patient medical profile (age, weight, BP, cholesterol, etc.)
@@ -390,7 +381,7 @@ sequenceDiagram
    - Error handling with fallback
 
 5. **Result Processing**:
-   - Detect red alerts (urgent diseases)
+   - Detect red alerts: the list of urgent diseases is matched using the **English** disease name (`disease_en`) from the ML response so that translations (e.g. "Crise cardiaque" / "Heart attack") are correctly recognised
    - Calculate best score (top prediction probability)
    - Create pathology results (top 3)
 

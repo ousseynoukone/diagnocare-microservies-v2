@@ -90,13 +90,13 @@ sequenceDiagram
 
 ### Steps
 
-1. **User submits symptoms** (IDs, labels, or raw description)
-2. **Resolve symptoms** to symptom list
+1. **User submits symptoms** via `symptomLabels` only (array of strings; no symptom IDs or raw description).
+2. **Use symptom labels** directly for the ML request
 3. **Get patient medical profile** (or use defaults)
 4. **Build ML request** with symptoms and profile
 5. **Call ML service** for predictions
 6. **Process ML response**:
-   - Detect red alerts (urgent diseases)
+   - Detect red alerts (urgent diseases; matching uses the English disease name from the ML response)
    - Calculate best score
    - Create pathology results (top 3)
 7. **Save prediction** and results to database
@@ -143,7 +143,7 @@ sequenceDiagram
 
 #### Check-In Submission (User)
 1. **User clicks link** in email
-2. **Submits current symptoms**
+2. **Submits check-in** with `userId`, `previousPredictionId`, and `symptomLabels` (no symptom IDs)
 3. **Get previous prediction**
 4. **Create follow-up prediction** with new symptoms
 5. **Compare predictions**:

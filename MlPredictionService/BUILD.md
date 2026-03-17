@@ -13,7 +13,7 @@ cd MlPredictionService
 pip install -r requirements.txt
 
 # Train the model → writes models/*.joblib
-python train.py
+python training/train_model.py
 
 # Generate translations → writes data/translations.json (and optionally data/symptoms_template.json)
 python generate_symptom_translations.py
