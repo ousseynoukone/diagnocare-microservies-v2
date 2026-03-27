@@ -4,6 +4,7 @@ Repository pour le chargement des modèles ML
 import joblib
 import os
 import logging
+import pandas as pd
 from typing import Dict, Any, Optional
 from config.model_config import ModelConfig
 
@@ -23,6 +24,7 @@ class ModelRepository:
         self.logger = logging.getLogger(__name__)
         self._models: Dict[str, Any] = {}
         self._loaded = False
+        self._disease_specialist_map: Optional[Dict[str, str]] = None
     
     def load_all(self) -> bool:
         """
@@ -100,6 +102,41 @@ class ModelRepository:
         """Raccourci pour accéder aux colonnes de features"""
         return self.get_model('feature_columns')
     
+    @property
+    def disease_specialist_map(self) -> Dict[str, str]:
+        """
+        Mapping maladie (nettoyée) -> spécialiste, chargé depuis Doctor_Versus_Disease.csv.
+        Utilisé pour associer le bon spécialiste à chaque maladie prédite,
+        en évitant la désynchronisation par rang indépendant.
+        """
+        if self._disease_specialist_map is None:
+            self._disease_specialist_map = self._load_disease_specialist_map()
+        return self._disease_specialist_map
+
+    def _load_disease_specialist_map(self) -> Dict[str, str]:
+        try:
+            from training.data_cleaning import clean_specialist_label
+            from utils.text_utils import TextUtils
+
+            mapping_path = os.path.join(self.config.DATA_DIR, 'Doctor_Versus_Disease.csv')
+            if not os.path.exists(mapping_path):
+                self.logger.warning(f"Fichier de mapping introuvable: {mapping_path}")
+                return {}
+
+            text_utils = TextUtils()
+            df_map = pd.read_csv(
+                mapping_path, header=None,
+                names=['Disease', 'Specialist'], encoding='cp1252'
+            )
+            df_map['Disease_clean'] = df_map['Disease'].apply(text_utils.clean_text)
+            df_map['Specialist'] = df_map['Specialist'].apply(clean_specialist_label)
+            mapping = dict(zip(df_map['Disease_clean'], df_map['Specialist']))
+            self.logger.info(f"Mapping maladie->spécialiste chargé: {len(mapping)} entrées")
+            return mapping
+        except Exception as e:
+            self.logger.error(f"Erreur lors du chargement du mapping maladie->spécialiste: {e}")
+            return {}
+
     def is_loaded(self) -> bool:
         """
         Vérifie si les modèles sont chargés

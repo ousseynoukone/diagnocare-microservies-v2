@@ -106,9 +106,13 @@ public class PredictionWorkflowServiceImpl implements PredictionWorkflowService 
             }
 
             if (profile.getMeanCholesterol() != null) {
-                if (profile.getMeanCholesterol() > 240) {
+                // Seuils alignés avec les distributions d'entraînement du modèle ML :
+                //   "High"   ~ N(235, 25)  → frontière à 220
+                //   "Normal" ~ N(190, 20)  → frontière à 170
+                //   "Low"    ~ N(155, 20)
+                if (profile.getMeanCholesterol() > 220) {
                     builder.cholesterol_level("High");
-                } else if (profile.getMeanCholesterol() < 200) {
+                } else if (profile.getMeanCholesterol() < 170) {
                     builder.cholesterol_level("Low");
                 } else {
                     builder.cholesterol_level("Normal");
