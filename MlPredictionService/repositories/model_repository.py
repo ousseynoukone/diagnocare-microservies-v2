@@ -113,28 +113,49 @@ class ModelRepository:
             self._disease_specialist_map = self._load_disease_specialist_map()
         return self._disease_specialist_map
 
+    # Corrections des labels de spécialistes (reprises de training/data_cleaning.py)
+    # pour éviter une dépendance croisée avec le module training au runtime.
+    _SPECIALIST_FIXES = {
+        "hepatologist":        "Hepatologist",
+        "Hepatologist":        "Hepatologist",
+        "Gastroenterologist ": "Gastroenterologist",
+        "Gastroenterologist":  "Gastroenterologist",
+        "Internal Medcine":    "Internal Medicine",
+        "Tuberculosis":        "Pulmonologist",
+    }
+
+    @staticmethod
+    def _clean_specialist(raw: str) -> str:
+        stripped = raw.strip()
+        if stripped in ModelRepository._SPECIALIST_FIXES:
+            return ModelRepository._SPECIALIST_FIXES[stripped]
+        return (stripped[0].upper() + stripped[1:]) if stripped else stripped
+
+    @staticmethod
+    def _clean_disease_name(text: str) -> str:
+        """Même logique que TextUtils.clean_text — inlinée pour éviter les imports circulaires."""
+        import re
+        normalized = str(text).strip().lower()
+        normalized = normalized.replace("-", " ").replace("/", " ")
+        return "_".join(re.sub(r'[^\w\s]', '', normalized).split())
+
     def _load_disease_specialist_map(self) -> Dict[str, str]:
+        mapping_path = os.path.join(self.config.DATA_DIR, 'Doctor_Versus_Disease.csv')
+        if not os.path.exists(mapping_path):
+            self.logger.warning(f"Fichier de mapping introuvable: {mapping_path}")
+            return {}
         try:
-            from training.data_cleaning import clean_specialist_label
-            from utils.text_utils import TextUtils
-
-            mapping_path = os.path.join(self.config.DATA_DIR, 'Doctor_Versus_Disease.csv')
-            if not os.path.exists(mapping_path):
-                self.logger.warning(f"Fichier de mapping introuvable: {mapping_path}")
-                return {}
-
-            text_utils = TextUtils()
             df_map = pd.read_csv(
                 mapping_path, header=None,
                 names=['Disease', 'Specialist'], encoding='cp1252'
             )
-            df_map['Disease_clean'] = df_map['Disease'].apply(text_utils.clean_text)
-            df_map['Specialist'] = df_map['Specialist'].apply(clean_specialist_label)
+            df_map['Disease_clean'] = df_map['Disease'].apply(self._clean_disease_name)
+            df_map['Specialist'] = df_map['Specialist'].apply(self._clean_specialist)
             mapping = dict(zip(df_map['Disease_clean'], df_map['Specialist']))
             self.logger.info(f"Mapping maladie->spécialiste chargé: {len(mapping)} entrées")
             return mapping
         except Exception as e:
-            self.logger.error(f"Erreur lors du chargement du mapping maladie->spécialiste: {e}")
+            self.logger.error(f"Erreur chargement mapping maladie->spécialiste: {e}", exc_info=True)
             return {}
 
     def is_loaded(self) -> bool:
