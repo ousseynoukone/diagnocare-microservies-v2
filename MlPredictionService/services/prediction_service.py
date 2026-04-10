@@ -85,7 +85,7 @@ class PredictionService:
         probs = model.predict_proba(df_final)
         disease_probs = probs[0][0]
         specialist_probs = probs[1][0]
-        
+
         # Top 5 maladies
         top_diseases_indices = disease_probs.argsort()[-5:][::-1]
         results = []
@@ -139,11 +139,11 @@ class PredictionService:
                 result.specialist_en = specialist_name_translated
             
             results.append(result)
-        
+
         # Métadonnées
         metadata = {
             "symptoms_count": len(cleaned_symptoms),
-            "profile_used": profile_data
+            "profile_used": profile_data,
         }
         
         return PredictionResponse(
