@@ -9,6 +9,7 @@ import com.homosapiens.diagnocareservice.dto.MLTranslationResponseDTO;
 import com.homosapiens.diagnocareservice.dto.MLSymptomExtractionRequestDTO;
 import com.homosapiens.diagnocareservice.dto.MLSymptomExtractionResponseDTO;
 import com.homosapiens.diagnocareservice.dto.MLFeaturesMetadataDTO;
+import com.homosapiens.diagnocareservice.dto.MLDiseasesMetadataDTO;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
@@ -103,10 +104,53 @@ public class MLPredictionClient {
             log.error("ML features metadata service returned non-success status: {}", response.getStatusCode());
             throw new AppException(HttpStatus.INTERNAL_SERVER_ERROR,
                     "ML features metadata service returned an error: " + response.getStatusCode());
+        } catch (org.springframework.web.client.RestClientResponseException e) {
+            String errorBody = e.getResponseBodyAsString();
+            if (errorBody != null && errorBody.toLowerCase().contains("<html")) {
+                errorBody = "ML Service returned an HTML error page (Status: " + e.getStatusCode() + ")";
+            } else if (errorBody == null || errorBody.isBlank()) {
+                errorBody = e.getMessage();
+            }
+            log.error("Error calling ML features metadata service: {}", errorBody);
+            throw new AppException(HttpStatus.SERVICE_UNAVAILABLE, "ML service is unavailable: " + errorBody);
         } catch (RestClientException e) {
             log.error("Error calling ML features metadata service: {}", e.getMessage(), e);
-            throw new AppException(HttpStatus.SERVICE_UNAVAILABLE,
-                    "ML service is unavailable: " + e.getMessage());
+            throw new AppException(HttpStatus.SERVICE_UNAVAILABLE, "ML service is unavailable: " + e.getMessage());
+        }
+    }
+
+    public MLDiseasesMetadataDTO getDiseasesMetadata() {
+        try {
+            String url = mlServiceConfig.getMlServiceUrl() + "/diseases-metadata";
+            log.info("Calling ML diseases metadata service at: {}", url);
+
+            RestTemplate restTemplate = selectRestTemplate(url);
+            ResponseEntity<MLDiseasesMetadataDTO> response = restTemplate.getForEntity(
+                    url,
+                    MLDiseasesMetadataDTO.class
+            );
+
+            if (response.getStatusCode().is2xxSuccessful() && response.getBody() != null) {
+                log.info("ML diseases metadata retrieved successfully. Found {} diseases", 
+                        response.getBody().getDiseases() != null ? response.getBody().getDiseases().getCount() : 0);
+                return response.getBody();
+            }
+
+            log.error("ML diseases metadata service returned non-success status: {}", response.getStatusCode());
+            throw new AppException(HttpStatus.INTERNAL_SERVER_ERROR,
+                    "ML diseases metadata service returned an error: " + response.getStatusCode());
+        } catch (org.springframework.web.client.RestClientResponseException e) {
+            String errorBody = e.getResponseBodyAsString();
+            if (errorBody != null && errorBody.toLowerCase().contains("<html")) {
+                errorBody = "ML Service returned an HTML error page (Status: " + e.getStatusCode() + ")";
+            } else if (errorBody == null || errorBody.isBlank()) {
+                errorBody = e.getMessage();
+            }
+            log.error("Error calling ML diseases metadata service: {}", errorBody);
+            throw new AppException(HttpStatus.SERVICE_UNAVAILABLE, "ML service is unavailable: " + errorBody);
+        } catch (RestClientException e) {
+            log.error("Error calling ML diseases metadata service: {}", e.getMessage(), e);
+            throw new AppException(HttpStatus.SERVICE_UNAVAILABLE, "ML service is unavailable: " + e.getMessage());
         }
     }
 

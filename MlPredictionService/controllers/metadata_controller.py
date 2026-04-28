@@ -4,6 +4,7 @@ Contrôleur pour les endpoints de métadonnées
 from flask import jsonify
 from repositories.model_repository import ModelRepository
 from services.translation_service import TranslationService
+from utils.text_utils import TextUtils
 
 
 class MetadataController:
@@ -24,6 +25,7 @@ class MetadataController:
         """
         self.model_repository = model_repository
         self.translation_service = translation_service
+        self.text_utils = TextUtils()
     
     def get_features_metadata(self):
         """
@@ -82,3 +84,29 @@ class MetadataController:
             },
             "languages": ["en", "fr"]
         }), 200
+
+    def get_diseases_metadata(self):
+        """
+        Retourne les métadonnées des maladies
+        Returns:
+            tuple: (réponse JSON, code HTTP)
+        """
+        diseases = sorted([str(d) for d in self.model_repository.le_disease.classes_])
+        
+        diseases_en = [
+            {"key": self.text_utils.normalize_symptom_name(d), "label": self.translation_service.translate_disease(d, target_lang="en")}
+            for d in diseases
+        ]
+        diseases_fr = [
+            {"key": self.text_utils.normalize_symptom_name(d), "label": self.translation_service.translate_disease(d, target_lang="fr")}
+            for d in diseases
+        ]
+        
+        return jsonify({
+            "diseases": {
+                "count": len(diseases),
+                "en": diseases_en,
+                "fr": diseases_fr
+            },
+            "languages": ["en", "fr"]
+        }), 200

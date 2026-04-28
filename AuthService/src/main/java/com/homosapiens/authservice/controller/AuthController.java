@@ -40,7 +40,7 @@ public class AuthController {
 
     @PostMapping("login")
     @Operation(summary = "Login", description = "Authenticate user and return access + refresh tokens")
-    private ResponseEntity<?> login(@RequestBody @Valid UserLoginDto user , BindingResult bindingResult, HttpServletRequest request) {
+    public ResponseEntity<?> login(@RequestBody @Valid UserLoginDto user , BindingResult bindingResult, HttpServletRequest request) {
         if (bindingResult.hasErrors()) {
             return ValidationHelper.buildValidationReponse(bindingResult, LanguageUtil.resolveLang(request));
         }
@@ -58,7 +58,7 @@ public class AuthController {
 
     @PostMapping("register")
     @Operation(summary = "Register", description = "Create a new user account")
-    private ResponseEntity<?> register(@RequestBody @Valid UserRegisterDto user , BindingResult bindingResult, HttpServletRequest request) {
+    public ResponseEntity<?> register(@RequestBody @Valid UserRegisterDto user , BindingResult bindingResult, HttpServletRequest request) {
 
         if (bindingResult.hasErrors()) {
             return ValidationHelper.buildValidationReponse(bindingResult, LanguageUtil.resolveLang(request));

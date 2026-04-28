@@ -168,191 +168,189 @@ public class ConsultationSummaryServiceImpl implements ConsultationSummaryServic
         return url;
     }
 
-    private String generateHtmlContent(ConsultationSummaryDTO summary) {
-        StringBuilder html = new StringBuilder();
-        html.append("<!DOCTYPE html><html><head><meta charset='UTF-8'>");
-        html.append("<style>");
-        html.append("body { font-family: Arial, sans-serif; margin: 40px; }");
-        html.append("h1 { color: #2c3e50; border-bottom: 3px solid #3498db; padding-bottom: 10px; }");
-        html.append("h2 { color: #34495e; margin-top: 30px; }");
-        html.append(".section { margin: 20px 0; padding: 15px; background-color: #f8f9fa; border-left: 4px solid #3498db; }");
-        html.append(".red-alert { background-color: #fee; border-left-color: #e74c3c; }");
-        html.append("ul { line-height: 1.8; }");
-        html.append("li { margin: 5px 0; }");
-        html.append("</style></head><body>");
-        
-        boolean isEnglish = "en".equals(summary.getLanguage());
-        String title = isEnglish ? "Consultation Summary - DiagnoCare" : "Résumé de Consultation - DiagnoCare";
-        String patientInfo = isEnglish ? "Patient Information" : "Informations Patient";
-        String nameLabel = isEnglish ? "Name" : "Nom";
-        String descriptionTitle = isEnglish ? "Symptoms Description" : "Description des Symptômes";
-        String declaredSymptoms = isEnglish ? "Declared Symptoms" : "Symptômes Déclarés";
-        String redFlagsTitle = isEnglish ? "⚠️ Safety Alerts (Red Flags)" : "⚠️ Alertes de Sécurité (Red Flags)";
-        String potentialTitle = isEnglish ? "Potential Pathologies" : "Pathologies Potentielles Envisagées";
-        String potentialNote = isEnglish
-                ? "Note: This is not a medical diagnosis. Only a healthcare professional can provide a diagnosis."
-                : "Note: Ceci n'est pas un diagnostic médical. Seul un professionnel de santé peut établir un diagnostic.";
-        String recommendedTitle = isEnglish ? "Recommended Medical Specialty" : "Spécialité Médicale Recommandée";
-        String questionsTitle = isEnglish ? "Questions to Ask Your Doctor" : "Questions Pertinentes à Poser au Médecin";
-        String detailsTitle = isEnglish ? "Pathology Details" : "Détails des Pathologies";
-        String specialistLabel = isEnglish ? "Specialist" : "Spécialiste";
-        String scoreLabel = isEnglish ? "Confidence" : "Confiance";
-        String checkInTitle = isEnglish ? "Follow-up" : "Suivi";
-        String checkInTypeLabel = isEnglish ? "Prediction type" : "Type de prédiction";
-        String checkInStatusLabel = isEnglish ? "Follow-up status" : "Statut du suivi";
-        String checkInOutcomeLabel = isEnglish ? "Outcome" : "Évolution";
-        String previousScoreLabel = isEnglish ? "Previous score" : "Score précédent";
-        String currentScoreLabel = isEnglish ? "Current score" : "Score actuel";
-        String deltaLabel = isEnglish ? "Score delta" : "Variation du score";
-        String worseReasonLabel = isEnglish ? "Worsening reason" : "Raison d'aggravation";
-        String checkInCountLabel = isEnglish ? "Total follow-ups" : "Nombre de suivis";
-        String timelineTitle = isEnglish ? "Timeline" : "Chronologie";
+    private String formatName(String raw) {
+        if (raw == null || raw.isBlank()) return "";
+        return java.util.Arrays.stream(raw.replace("_", " ").trim().split("\\s+"))
+                .map(w -> w.isEmpty() ? "" : Character.toUpperCase(w.charAt(0)) + w.substring(1).toLowerCase())
+                .collect(java.util.stream.Collectors.joining(" "));
+    }
 
+    private String formatDateTime(String isoDateTime) {
+        if (isoDateTime == null) return "";
+        try {
+            java.time.LocalDateTime dt = java.time.LocalDateTime.parse(isoDateTime);
+            return dt.format(java.time.format.DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm"));
+        } catch (Exception e) {
+            return isoDateTime.contains("T") ? isoDateTime.replace("T", " ").substring(0, Math.min(16, isoDateTime.length())) : isoDateTime;
+        }
+    }
+
+    private String generateHtmlContent(ConsultationSummaryDTO summary) {
+        boolean isEnglish = "en".equals(summary.getLanguage());
+
+        // --- Labels ---
+        String title        = isEnglish ? "Consultation Summary – DiagnoCare" : "Résumé de Consultation – DiagnoCare";
+        String patientInfo  = isEnglish ? "Patient Information" : "Informations Patient";
+        String nameLabel    = isEnglish ? "Name" : "Nom";
+        String generatedLabel = isEnglish ? "Generated" : "Généré le";
+        String countLabel   = isEnglish ? "Symptoms" : "Symptômes";
+        String descTitle    = isEnglish ? "Symptoms Description" : "Description des Symptômes";
+        String sympTitle    = isEnglish ? "Declared Symptoms" : "Symptômes Déclarés";
+        String redTitle     = isEnglish ? "⚠ Safety Alerts" : "⚠ Alertes de Sécurité";
+        String pathTitle    = isEnglish ? "Potential Pathologies" : "Pathologies Potentielles";
+        String potentialNote = isEnglish
+                ? "Not a medical diagnosis – consult a healthcare professional."
+                : "Ceci n'est pas un diagnostic médical – consultez un professionnel de santé.";
+        String detailsTitle = isEnglish ? "Pathology Details" : "Détails des Pathologies";
+        String specialistCol = isEnglish ? "Specialist" : "Spécialiste";
+        String scoreCol     = isEnglish ? "Confidence" : "Confiance";
+        String recommendedTitle = isEnglish ? "Recommended Specialty" : "Spécialité Recommandée";
+        String questionsTitle   = isEnglish ? "Questions for Your Doctor" : "Questions pour Votre Médecin";
+        String checkInTitle     = isEnglish ? "Follow-up Information" : "Informations de Suivi";
+        String checkInTypeLabel = isEnglish ? "Type" : "Type";
+        String checkInStatusLabel  = isEnglish ? "Status" : "Statut";
+        String checkInOutcomeLabel = isEnglish ? "Outcome" : "Évolution";
+        String prevScoreLabel   = isEnglish ? "Previous score" : "Score précédent";
+        String currScoreLabel   = isEnglish ? "Current score" : "Score actuel";
+        String deltaLabel       = isEnglish ? "Delta" : "Variation";
+        String worseLabel       = isEnglish ? "Worsening reason" : "Raison d'aggravation";
+        String countCheckinLabel = isEnglish ? "Total follow-ups" : "Nombre de suivis";
+        String timelineTitle    = isEnglish ? "Timeline" : "Chronologie";
+        String dateCol          = isEnglish ? "Date" : "Date";
+        String sympCol          = isEnglish ? "Symptoms" : "Symptômes";
+        String outcomeCol       = isEnglish ? "Outcome" : "Évolution";
+
+        // --- Name formatting ---
+        String patientName = formatName(summary.getPatientName());
+
+        StringBuilder html = new StringBuilder();
+        html.append("<!DOCTYPE html><html><head><meta charset='UTF-8'><style>");
+        // Compact, professional CSS
+        html.append("* { box-sizing: border-box; margin: 0; padding: 0; }");
+        html.append("body { font-family: Arial, Helvetica, sans-serif; font-size: 11px; color: #222; background: #fff; padding: 18px 22px; }");
+        html.append("h1 { font-size: 16px; color: #1a5276; border-bottom: 2px solid #1a5276; padding-bottom: 5px; margin-bottom: 10px; }");
+        html.append("h2 { font-size: 12px; color: #1a5276; margin-bottom: 5px; text-transform: uppercase; letter-spacing: 0.5px; }");
+        html.append(".sec { margin-bottom: 10px; border: 1px solid #d5e8f3; border-left: 3px solid #1a5276; border-radius: 2px; padding: 8px 10px; background: #f7fbfe; }");
+        html.append(".sec.alert { border-left-color: #c0392b; background: #fdf3f2; }");
+        html.append(".grid2 { display: table; width: 100%; }");
+        html.append(".col { display: table-cell; width: 50%; vertical-align: top; padding-right: 8px; }");
+        html.append(".row { margin-bottom: 3px; }");
+        html.append(".lbl { font-weight: bold; color: #444; }");
+        html.append(".pills { margin-top: 4px; }");
+        html.append(".pill { display: inline-block; background: #d6eaf8; border-radius: 10px; padding: 1px 7px; margin: 2px 2px 2px 0; font-size: 10px; }");
+        html.append("table { width: 100%; border-collapse: collapse; font-size: 10.5px; margin-top: 4px; }");
+        html.append("th { background: #1a5276; color: #fff; text-align: left; padding: 4px 6px; font-size: 10px; }");
+        html.append("td { padding: 3px 6px; border-bottom: 1px solid #e0e0e0; vertical-align: top; }");
+        html.append("tr:nth-child(even) td { background: #f0f8ff; }");
+        html.append(".footer { margin-top: 10px; padding-top: 6px; border-top: 1px solid #ccc; color: #888; font-size: 9px; }");
+        html.append(".note { font-style: italic; color: #666; font-size: 10px; margin-bottom: 3px; }");
+        html.append(".recommended { font-size: 13px; font-weight: bold; color: #1a5276; }");
+        html.append("ul { margin: 3px 0 0 14px; padding: 0; }");
+        html.append("li { margin-bottom: 2px; }");
+        html.append("</style></head><body>");
+
+        // Title
         html.append("<h1>").append(title).append("</h1>");
-        html.append("<div class='section'><h2>").append(patientInfo).append("</h2>");
-        html.append("<p><strong>").append(nameLabel).append(":</strong> ").append(summary.getPatientName()).append("</p>");
+
+        // Patient info – compact two-col grid
+        html.append("<div class='sec'><h2>").append(patientInfo).append("</h2><div class='grid2'>");
+        html.append("<div class='col'>");
+        html.append("<div class='row'><span class='lbl'>").append(nameLabel).append(":</span> ").append(patientName).append("</div>");
+        html.append("</div>");
+        html.append("<div class='col'>");
         if (summary.getGeneratedAt() != null) {
-            String generatedLabel = isEnglish ? "Generated at" : "Généré le";
-            html.append("<p><strong>").append(generatedLabel).append(":</strong> ")
-                .append(summary.getGeneratedAt()).append("</p>");
+            html.append("<div class='row'><span class='lbl'>").append(generatedLabel).append(":</span> ").append(formatDateTime(summary.getGeneratedAt())).append("</div>");
         }
         if (summary.getSymptomsCount() != null) {
-            String countLabel = isEnglish ? "Symptoms count" : "Nombre de symptômes";
-            html.append("<p><strong>").append(countLabel).append(":</strong> ")
-                .append(summary.getSymptomsCount()).append("</p>");
+            html.append("<div class='row'><span class='lbl'>").append(countLabel).append(":</span> ").append(summary.getSymptomsCount()).append("</div>");
         }
-        html.append("</div>");
-        
-        html.append("<div class='section'><h2>").append(descriptionTitle).append("</h2>");
-        html.append("<p>").append(summary.getSymptomsDescription()).append("</p>");
-        html.append("</div>");
-        
+        html.append("</div></div></div>");
+
+        // Red flags
+        if (summary.getHasRedFlags() && summary.getRedFlags() != null && !summary.getRedFlags().isEmpty()) {
+            html.append("<div class='sec alert'><h2>").append(redTitle).append("</h2><ul>");
+            summary.getRedFlags().forEach(f -> html.append("<li><strong>").append(f).append("</strong></li>"));
+            html.append("</ul></div>");
+        }
+
+        // Symptoms description (only if non-empty)
+        if (summary.getSymptomsDescription() != null && !summary.getSymptomsDescription().isBlank()) {
+            html.append("<div class='sec'><h2>").append(descTitle).append("</h2>");
+            html.append("<p style='margin-top:3px;'>").append(summary.getSymptomsDescription()).append("</p></div>");
+        }
+
+        // Declared symptoms as pills
         if (summary.getSymptoms() != null && !summary.getSymptoms().isEmpty()) {
-            html.append("<div class='section'><h2>").append(declaredSymptoms).append("</h2><ul>");
-            summary.getSymptoms().forEach(symptom -> 
-                html.append("<li>").append(symptom).append("</li>"));
-            html.append("</ul></div>");
-        }
-        
-        if (summary.getHasRedFlags()) {
-            html.append("<div class='section red-alert'><h2>").append(redFlagsTitle).append("</h2><ul>");
-            summary.getRedFlags().forEach(flag -> 
-                html.append("<li><strong>").append(flag).append("</strong></li>"));
-            html.append("</ul></div>");
-        }
-        
-        if (summary.getPotentialPathologies() != null && !summary.getPotentialPathologies().isEmpty()) {
-            html.append("<div class='section'><h2>").append(potentialTitle).append("</h2>");
-            html.append("<p><em>").append(potentialNote).append("</em></p><ul>");
-            summary.getPotentialPathologies().forEach(pathology -> 
-                html.append("<li>").append(pathology).append("</li>"));
-            html.append("</ul></div>");
+            html.append("<div class='sec'><h2>").append(sympTitle).append("</h2><div class='pills'>");
+            summary.getSymptoms().forEach(s -> html.append("<span class='pill'>").append(s).append("</span>"));
+            html.append("</div></div>");
         }
 
+        // Pathology details as table
         if (summary.getPathologyDetails() != null && !summary.getPathologyDetails().isEmpty()) {
-            html.append("<div class='section'><h2>").append(detailsTitle).append("</h2>");
-            summary.getPathologyDetails().forEach(detail -> {
-                html.append("<div style='margin-bottom: 12px;'>");
-                html.append("<strong>").append(detail.getPathologyName()).append("</strong>");
-                if (detail.getDiseaseScore() != null) {
-                    html.append(" - ").append(scoreLabel).append(": ")
-                        .append(formatScore(detail.getDiseaseScore()));
+            html.append("<div class='sec'><h2>").append(detailsTitle).append("</h2>");
+            html.append("<p class='note'>").append(potentialNote).append("</p>");
+            html.append("<table><thead><tr><th>").append(pathTitle).append("</th><th>").append(scoreCol).append("</th><th>").append(specialistCol).append("</th></tr></thead><tbody>");
+            summary.getPathologyDetails().forEach(d -> {
+                html.append("<tr><td>").append(d.getPathologyName()).append("</td>");
+                html.append("<td>").append(d.getDiseaseScore() != null ? formatScore(d.getDiseaseScore()) : "–").append("</td>");
+                html.append("<td>").append(d.getSpecialist() != null ? d.getSpecialist() : "–").append("</td></tr>");
+                if (d.getDescription() != null && !d.getDescription().isBlank()) {
+                    html.append("<tr><td colspan='3' style='color:#555;font-style:italic;font-size:10px;padding-bottom:5px;'>").append(d.getDescription()).append("</td></tr>");
                 }
-                if (detail.getSpecialist() != null && !detail.getSpecialist().isBlank()) {
-                    html.append("<br/><em>").append(specialistLabel).append(": ")
-                        .append(detail.getSpecialist()).append("</em>");
-                }
-                if (detail.getDescription() != null && !detail.getDescription().isBlank()) {
-                    html.append("<br/>").append(detail.getDescription());
-                }
-                html.append("</div>");
             });
-            html.append("</div>");
+            html.append("</tbody></table></div>");
         }
-        
-        html.append("<div class='section'><h2>").append(recommendedTitle).append("</h2>");
-        html.append("<p><strong>").append(summary.getRecommendedSpecialty()).append("</strong></p>");
-        html.append("</div>");
-        
+
+        // Recommended specialty
+        html.append("<div class='sec'><h2>").append(recommendedTitle).append("</h2>");
+        html.append("<p class='recommended'>").append(summary.getRecommendedSpecialty()).append("</p></div>");
+
+        // Questions for doctor
         if (summary.getQuestionsForDoctor() != null && !summary.getQuestionsForDoctor().isEmpty()) {
-            html.append("<div class='section'><h2>").append(questionsTitle).append("</h2><ul>");
-            summary.getQuestionsForDoctor().forEach(question -> 
-                html.append("<li>").append(question).append("</li>"));
+            html.append("<div class='sec'><h2>").append(questionsTitle).append("</h2><ul>");
+            summary.getQuestionsForDoctor().forEach(q -> html.append("<li>").append(q).append("</li>"));
             html.append("</ul></div>");
         }
 
+        // Follow-up info
         if (summary.getCheckIn() != null) {
-            html.append("<div class='section'><h2>").append(checkInTitle).append("</h2>");
-            String typeLabel = summary.getCheckIn() ? (isEnglish ? "Follow-up" : "Suivi") : (isEnglish ? "Initial" : "Initial");
-            html.append("<p><strong>").append(checkInTypeLabel).append(":</strong> ").append(typeLabel).append("</p>");
-            if (summary.getCheckInStatus() != null) {
-                html.append("<p><strong>").append(checkInStatusLabel).append(":</strong> ")
-                    .append(summary.getCheckInStatus()).append("</p>");
-            }
-            if (summary.getCheckInCount() != null) {
-                html.append("<p><strong>").append(checkInCountLabel).append(":</strong> ")
-                    .append(summary.getCheckInCount()).append("</p>");
-            }
-            if (summary.getCheckInOutcome() != null) {
-                html.append("<p><strong>").append(checkInOutcomeLabel).append(":</strong> ")
-                    .append(summary.getCheckInOutcome()).append("</p>");
-            }
-            if (summary.getPreviousBestScore() != null) {
-                html.append("<p><strong>").append(previousScoreLabel).append(":</strong> ")
-                    .append(formatScore(summary.getPreviousBestScore())).append("</p>");
-            }
-            if (summary.getCurrentBestScore() != null) {
-                html.append("<p><strong>").append(currentScoreLabel).append(":</strong> ")
-                    .append(formatScore(summary.getCurrentBestScore())).append("</p>");
-            }
-            if (summary.getBestScoreDelta() != null) {
-                html.append("<p><strong>").append(deltaLabel).append(":</strong> ")
-                    .append(formatScore(summary.getBestScoreDelta())).append("</p>");
-            }
-            if (summary.getWorseReason() != null) {
-                html.append("<p><strong>").append(worseReasonLabel).append(":</strong> ")
-                    .append(summary.getWorseReason()).append("</p>");
-            }
-            html.append("</div>");
+            html.append("<div class='sec'><h2>").append(checkInTitle).append("</h2><div class='grid2'><div class='col'>");
+            String typeVal = summary.getCheckIn() ? (isEnglish ? "Follow-up" : "Suivi") : (isEnglish ? "Initial" : "Initial");
+            html.append("<div class='row'><span class='lbl'>").append(checkInTypeLabel).append(":</span> ").append(typeVal).append("</div>");
+            if (summary.getCheckInStatus()  != null) html.append("<div class='row'><span class='lbl'>").append(checkInStatusLabel).append(":</span> ").append(summary.getCheckInStatus()).append("</div>");
+            if (summary.getCheckInOutcome() != null) html.append("<div class='row'><span class='lbl'>").append(checkInOutcomeLabel).append(":</span> ").append(summary.getCheckInOutcome()).append("</div>");
+            if (summary.getCheckInCount()   != null) html.append("<div class='row'><span class='lbl'>").append(countCheckinLabel).append(":</span> ").append(summary.getCheckInCount()).append("</div>");
+            html.append("</div><div class='col'>");
+            if (summary.getPreviousBestScore() != null) html.append("<div class='row'><span class='lbl'>").append(prevScoreLabel).append(":</span> ").append(formatScore(summary.getPreviousBestScore())).append("</div>");
+            if (summary.getCurrentBestScore()  != null) html.append("<div class='row'><span class='lbl'>").append(currScoreLabel).append(":</span> ").append(formatScore(summary.getCurrentBestScore())).append("</div>");
+            if (summary.getBestScoreDelta()    != null) html.append("<div class='row'><span class='lbl'>").append(deltaLabel).append(":</span> ").append(formatScore(summary.getBestScoreDelta())).append("</div>");
+            if (summary.getWorseReason()       != null) html.append("<div class='row'><span class='lbl'>").append(worseLabel).append(":</span> ").append(summary.getWorseReason()).append("</div>");
+            html.append("</div></div></div>");
         }
 
+        // Timeline as table
         if (summary.getTimeline() != null && !summary.getTimeline().isEmpty()) {
-            html.append("<div class='section'><h2>").append(timelineTitle).append("</h2>");
-            summary.getTimeline().forEach(entry -> {
-                html.append("<div style='margin-bottom: 12px;'>");
-                html.append("<strong>").append(entry.getType()).append("</strong>");
-                if (entry.getDate() != null) {
-                    html.append(" - ").append(entry.getDate());
-                }
-                if (entry.getScore() != null) {
-                    html.append(" | ").append(scoreLabel).append(": ")
-                        .append(formatScore(entry.getScore()));
-                }
-                if (entry.getDelta() != null) {
-                    html.append(" | ").append(deltaLabel).append(": ")
-                        .append(formatScore(entry.getDelta()));
-                }
-                if (entry.getOutcome() != null) {
-                    html.append("<br/>").append(checkInOutcomeLabel).append(": ")
-                        .append(entry.getOutcome());
-                }
-                if (entry.getStatus() != null) {
-                    html.append("<br/>").append(checkInStatusLabel).append(": ")
-                        .append(entry.getStatus());
-                }
-                if (entry.getSymptoms() != null && !entry.getSymptoms().isEmpty()) {
-                    html.append("<br/>").append(isEnglish ? "Symptoms" : "Symptômes").append(": ")
-                        .append(String.join(", ", entry.getSymptoms()));
-                }
-                html.append("</div>");
+            html.append("<div class='sec'><h2>").append(timelineTitle).append("</h2>");
+            html.append("<table><thead><tr><th>").append(checkInTypeLabel).append("</th><th>").append(dateCol).append("</th><th>").append(scoreCol).append("</th><th>").append(deltaLabel).append("</th><th>").append(outcomeCol).append("</th><th>").append(sympCol).append("</th></tr></thead><tbody>");
+            summary.getTimeline().forEach(e -> {
+                html.append("<tr>");
+                html.append("<td>").append(e.getType() != null ? e.getType() : "–").append("</td>");
+                html.append("<td>").append(e.getDate() != null ? formatDateTime(e.getDate()) : "–").append("</td>");
+                html.append("<td>").append(e.getScore() != null ? formatScore(e.getScore()) : "–").append("</td>");
+                html.append("<td>").append(e.getDelta() != null ? formatScore(e.getDelta()) : "–").append("</td>");
+                html.append("<td>").append(e.getOutcome() != null ? e.getOutcome() : "–").append("</td>");
+                html.append("<td>").append(e.getSymptoms() != null && !e.getSymptoms().isEmpty() ? String.join(", ", e.getSymptoms()) : "–").append("</td>");
+                html.append("</tr>");
             });
-            html.append("</div>");
+            html.append("</tbody></table></div>");
         }
-        
-        html.append("<div style='margin-top: 40px; padding-top: 20px; border-top: 2px solid #ddd; color: #7f8c8d;'>");
-        html.append("<p><small>Document généré par DiagnoCare - ").append(java.time.LocalDateTime.now()).append("</small></p>");
-        html.append("</div>");
-        
+
+        // Footer
+        html.append("<div class='footer'>Document généré par DiagnoCare – ")
+            .append(java.time.LocalDateTime.now().format(java.time.format.DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm")))
+            .append("</div>");
+
         html.append("</body></html>");
         return html.toString();
     }

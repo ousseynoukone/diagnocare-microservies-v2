@@ -167,6 +167,20 @@ def _register_routes(
         """
         return metadata_controller.get_features_metadata()
     
+    # Route de maladies
+    @app.route('/diseases-metadata', methods=['GET'])
+    def diseases_metadata():
+        """
+        Get diseases metadata
+        ---
+        tags:
+          - Metadata
+        responses:
+          200:
+            description: Diseases list in EN/FR
+        """
+        return metadata_controller.get_diseases_metadata()
+    
     # Route d'extraction de symptômes
     @app.route('/extract-symptoms', methods=['POST'])
     def extract_symptoms():

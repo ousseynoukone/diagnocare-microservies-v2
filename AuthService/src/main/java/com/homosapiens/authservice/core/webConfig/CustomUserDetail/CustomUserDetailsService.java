@@ -1,16 +1,14 @@
 package com.homosapiens.authservice.core.webConfig.CustomUserDetail;
 
-import com.homosapiens.authservice.core.exception.AppException;
 import com.homosapiens.authservice.model.User;
 import com.homosapiens.authservice.service.UserLookupService;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.HttpStatus;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.security.core.userdetails.UserDetailsService;
+import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.stereotype.Service;
-
-import org.springframework.security.core.userdetails.*;
 
 import java.util.List;
 import java.util.stream.Collectors;
@@ -21,10 +19,12 @@ public class CustomUserDetailsService  implements UserDetailsService {
     private UserLookupService userLookupService;
 
     @Override
-    public UserDetails loadUserByUsername(String email) throws AppException {
+    public UserDetails loadUserByUsername(String email) throws UsernameNotFoundException {
         // Use UserLookupService to handle encrypted email lookup
+        // Must throw UsernameNotFoundException (not AppException) so Spring Security
+        // properly propagates the error through the login flow.
         User user = userLookupService.findUserByEmail(email)
-                .orElseThrow(() -> new AppException(HttpStatus.NOT_FOUND, "User Not Found with email: " + email));
+                .orElseThrow(() -> new UsernameNotFoundException("User Not Found with email: " + email));
         
         List<GrantedAuthority> authorities = user.getRoles().stream()
                 .map(role -> new SimpleGrantedAuthority(role.getName().name()))

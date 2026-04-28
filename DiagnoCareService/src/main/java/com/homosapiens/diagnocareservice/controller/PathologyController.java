@@ -19,6 +19,7 @@ import java.util.List;
 public class PathologyController {
 
     private final PathologyService pathologyService;
+    private final com.homosapiens.diagnocareservice.service.MLPredictionClient mlPredictionClient;
 
     @DeleteMapping("/{id}")
     @Operation(summary = "Delete a pathology", description = "Deletes a pathology by ID")
@@ -51,5 +52,12 @@ public class PathologyController {
         return pathologyService.getPathologyByName(name)
                 .map(pathology -> ResponseEntity.ok(pathologyService.convertToDTO(pathology)))
                 .orElse(ResponseEntity.notFound().build());
+    }
+
+    @GetMapping("/ml-metadata")
+    @Operation(summary = "Get ML diseases metadata", description = "Retrieves all diseases/pathologies from ML service with translations in French and English")
+    public ResponseEntity<com.homosapiens.diagnocareservice.dto.MLDiseasesMetadataDTO> getMLDiseasesMetadata() {
+        com.homosapiens.diagnocareservice.dto.MLDiseasesMetadataDTO metadata = mlPredictionClient.getDiseasesMetadata();
+        return ResponseEntity.ok(metadata);
     }
 }
