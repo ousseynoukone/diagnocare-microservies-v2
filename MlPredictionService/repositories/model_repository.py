@@ -4,6 +4,7 @@ Repository pour le chargement des modèles ML
 import joblib
 import os
 import logging
+import pandas as pd
 from typing import Dict, Any, Optional
 from config.model_config import ModelConfig
 
@@ -23,6 +24,7 @@ class ModelRepository:
         self.logger = logging.getLogger(__name__)
         self._models: Dict[str, Any] = {}
         self._loaded = False
+        self._disease_specialist_map: Optional[Dict[str, str]] = None
     
     def load_all(self) -> bool:
         """
@@ -100,6 +102,62 @@ class ModelRepository:
         """Raccourci pour accéder aux colonnes de features"""
         return self.get_model('feature_columns')
     
+    @property
+    def disease_specialist_map(self) -> Dict[str, str]:
+        """
+        Mapping maladie (nettoyée) -> spécialiste, chargé depuis Doctor_Versus_Disease.csv.
+        Utilisé pour associer le bon spécialiste à chaque maladie prédite,
+        en évitant la désynchronisation par rang indépendant.
+        """
+        if self._disease_specialist_map is None:
+            self._disease_specialist_map = self._load_disease_specialist_map()
+        return self._disease_specialist_map
+
+    # Corrections des labels de spécialistes (reprises de training/data_cleaning.py)
+    # pour éviter une dépendance croisée avec le module training au runtime.
+    _SPECIALIST_FIXES = {
+        "hepatologist":        "Hepatologist",
+        "Hepatologist":        "Hepatologist",
+        "Gastroenterologist ": "Gastroenterologist",
+        "Gastroenterologist":  "Gastroenterologist",
+        "Internal Medcine":    "Internal Medicine",
+        "Tuberculosis":        "Pulmonologist",
+    }
+
+    @staticmethod
+    def _clean_specialist(raw: str) -> str:
+        stripped = raw.strip()
+        if stripped in ModelRepository._SPECIALIST_FIXES:
+            return ModelRepository._SPECIALIST_FIXES[stripped]
+        return (stripped[0].upper() + stripped[1:]) if stripped else stripped
+
+    @staticmethod
+    def _clean_disease_name(text: str) -> str:
+        """Même logique que TextUtils.clean_text — inlinée pour éviter les imports circulaires."""
+        import re
+        normalized = str(text).strip().lower()
+        normalized = normalized.replace("-", " ").replace("/", " ")
+        return "_".join(re.sub(r'[^\w\s]', '', normalized).split())
+
+    def _load_disease_specialist_map(self) -> Dict[str, str]:
+        mapping_path = os.path.join(self.config.DATA_DIR, 'Doctor_Versus_Disease.csv')
+        if not os.path.exists(mapping_path):
+            self.logger.warning(f"Fichier de mapping introuvable: {mapping_path}")
+            return {}
+        try:
+            df_map = pd.read_csv(
+                mapping_path, header=None,
+                names=['Disease', 'Specialist'], encoding='cp1252'
+            )
+            df_map['Disease_clean'] = df_map['Disease'].apply(self._clean_disease_name)
+            df_map['Specialist'] = df_map['Specialist'].apply(self._clean_specialist)
+            mapping = dict(zip(df_map['Disease_clean'], df_map['Specialist']))
+            self.logger.info(f"Mapping maladie->spécialiste chargé: {len(mapping)} entrées")
+            return mapping
+        except Exception as e:
+            self.logger.error(f"Erreur chargement mapping maladie->spécialiste: {e}", exc_info=True)
+            return {}
+
     def is_loaded(self) -> bool:
         """
         Vérifie si les modèles sont chargés

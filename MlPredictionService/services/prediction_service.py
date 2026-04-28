@@ -95,13 +95,39 @@ class PredictionService:
         le_disease = self.model_repository.le_disease
         le_specialist = self.model_repository.le_specialist
 
+        disease_specialist_map = self.model_repository.disease_specialist_map
+
         for i, idx in enumerate(top_diseases_indices):
             disease_name = le_disease.inverse_transform([idx])[0]
             probability = disease_probs[idx]
 
-            specialist_idx = specialist_probs.argsort()[-5:][::-1][i]
-            specialist_name = le_specialist.inverse_transform([specialist_idx])[0]
-            specialist_prob = specialist_probs[specialist_idx]
+            # Résoudre le spécialiste via le mapping maladie->spécialiste plutôt que
+            # par rang indépendant (évite la désynchronisation des deux sorties du modèle).
+            disease_clean = self.text_utils.clean_text(disease_name)
+            mapped_specialist = disease_specialist_map.get(disease_clean)
+
+            if mapped_specialist is not None:
+                try:
+                    specialist_idx = le_specialist.transform([mapped_specialist])[0]
+                    specialist_name = mapped_specialist
+                    specialist_prob = specialist_probs[specialist_idx]
+                except ValueError:
+                    self.logger.warning(
+                        f"Spécialiste '{mapped_specialist}' absent du LabelEncoder, "
+                        f"fallback sur la proba maximale."
+                    )
+                    specialist_idx = int(specialist_probs.argmax())
+                    specialist_name = le_specialist.inverse_transform([specialist_idx])[0]
+                    specialist_prob = specialist_probs[specialist_idx]
+            else:
+                # Fallback : spécialiste avec la probabilité la plus élevée
+                self.logger.warning(
+                    f"Aucun mapping pour la maladie '{disease_name}' ({disease_clean}), "
+                    f"fallback sur la proba maximale."
+                )
+                specialist_idx = int(specialist_probs.argmax())
+                specialist_name = le_specialist.inverse_transform([specialist_idx])[0]
+                specialist_prob = specialist_probs[specialist_idx]
 
             disease_name_translated = self.translation_service.translate_disease(
                 disease_name, target_lang=request.language

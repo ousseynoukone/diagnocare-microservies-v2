@@ -82,7 +82,7 @@ public class PredictionWorkflowServiceImpl implements PredictionWorkflowService 
             PatientMedicalProfile profile = profileOpt.get();
             builder.age(profile.getAge())
                    .weight(profile.getWeight())
-                   .bmi((float) profile.getBmi())
+                   .bmi(profile.getBmi() != null ? (float) profile.getBmi() : 24.2f)
                    .tension_moyenne(profile.getMeanBloodPressure())
                    .cholesterole_moyen(profile.getMeanCholesterol())
                    .gender(profile.getGender() != null
@@ -106,9 +106,13 @@ public class PredictionWorkflowServiceImpl implements PredictionWorkflowService 
             }
 
             if (profile.getMeanCholesterol() != null) {
-                if (profile.getMeanCholesterol() > 240) {
+                // Seuils alignés avec les distributions d'entraînement du modèle ML :
+                //   "High"   ~ N(235, 25)  → frontière à 220
+                //   "Normal" ~ N(190, 20)  → frontière à 170
+                //   "Low"    ~ N(155, 20)
+                if (profile.getMeanCholesterol() > 220) {
                     builder.cholesterol_level("High");
-                } else if (profile.getMeanCholesterol() < 200) {
+                } else if (profile.getMeanCholesterol() < 170) {
                     builder.cholesterol_level("Low");
                 } else {
                     builder.cholesterol_level("Normal");
@@ -179,12 +183,19 @@ public class PredictionWorkflowServiceImpl implements PredictionWorkflowService 
         if (mlResponse.getPredictions() == null || mlResponse.getPredictions().isEmpty()) {
             return false;
         }
-        MLPredictionResponseDTO.PredictionResult topResult = mlResponse.getPredictions().get(0);
-        // Urgent-disease list uses English names; ML may return "disease" in French when lang=fr
-        String diseaseNameForCheck = (topResult.getDisease_en() != null && !topResult.getDisease_en().isBlank())
-                ? topResult.getDisease_en()
-                : topResult.getDisease();
-        return diseaseNameForCheck != null && urgentDiseaseService.isUrgentDisease(diseaseNameForCheck);
+        // Vérification sur les top 5 résultats : une maladie urgente peut apparaître
+        // en rank 2 ou 3 même si elle n'est pas en tête du classement.
+        // Seuil de 15% : ignorer les prédictions marginales pour éviter les faux positifs.
+        final double RED_ALERT_MIN_PROBABILITY = 15.0;
+        return mlResponse.getPredictions().stream()
+                .filter(result -> result.getProbability() != null
+                        && result.getProbability() >= RED_ALERT_MIN_PROBABILITY)
+                .anyMatch(result -> {
+                    String diseaseName = (result.getDisease_en() != null && !result.getDisease_en().isBlank())
+                            ? result.getDisease_en()
+                            : result.getDisease();
+                    return diseaseName != null && urgentDiseaseService.isUrgentDisease(diseaseName);
+                });
     }
 
     private BigDecimal calculateBestScore(MLPredictionResponseDTO mlResponse) {
