@@ -8,7 +8,7 @@ Evaluation du modele apres entrainement :
 import os
 import sys
 import numpy as np
-from sklearn.metrics import accuracy_score, confusion_matrix, classification_report
+from sklearn.metrics import accuracy_score, confusion_matrix, classification_report, roc_auc_score
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from config.model_config import ModelConfig
@@ -71,6 +71,31 @@ def evaluate_and_report(
     print("\n   --- Matrice de confusion (Maladies) ---")
     print(f"   Forme: {cm_disease.shape[0]} classes x {cm_disease.shape[1]} classes")
     print(classification_report(y_disease_true, y_disease_pred, target_names=disease_labels, zero_division=0))
+
+    # --- AUC One-vs-Rest par classe (detecte les inversions de signal comme hepatitis A) ---
+    try:
+        auc_ovr = roc_auc_score(
+            y_disease_true, probs_disease,
+            multi_class='ovr', average=None
+        )
+        print("   --- AUC One-vs-Rest par maladie ---")
+        low_auc_classes = []
+        for cls_name, auc in zip(disease_labels, auc_ovr):
+            flag = ""
+            if auc < 0.50:
+                flag = " *** INVERSION DE SIGNAL - VERIFIER LABELENCODER ***"
+                low_auc_classes.append((cls_name, auc))
+            elif auc < 0.70:
+                flag = " /!\\ FAIBLE"
+                low_auc_classes.append((cls_name, auc))
+            print(f"   {cls_name:45s} AUC = {auc:.3f}{flag}")
+        print(f"\n   AUC macro-moyenne (maladies): {auc_ovr.mean():.3f}")
+        if low_auc_classes:
+            print(f"   /!\\ {len(low_auc_classes)} classes avec AUC < 0.70 :")
+            for name, auc in sorted(low_auc_classes, key=lambda x: x[1]):
+                print(f"      - {name}: AUC = {auc:.3f}")
+    except Exception as e:
+        print(f"   AUC calcul impossible: {e}")
 
     # --- Rapport par specialiste ---
     y_specialist_true = Y_test[:, 1]

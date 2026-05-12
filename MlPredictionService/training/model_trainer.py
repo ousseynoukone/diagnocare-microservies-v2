@@ -19,6 +19,7 @@ import pandas as pd
 import numpy as np
 from sklearn.model_selection import train_test_split
 from sklearn.calibration import CalibratedClassifierCV
+from sklearn.frozen import FrozenEstimator
 from sklearn.multioutput import MultiOutputClassifier
 from xgboost import XGBClassifier
 
@@ -82,8 +83,21 @@ class ModelTrainer:
             verbosity=0,
         )
 
+        # --- Split train / calibration ---
+        # La calibration isotonique DOIT se faire sur des donnees que le modele
+        # n'a PAS vues pendant l'entrainement. Sinon l'isotonique memorise X_train
+        # (regression monotone non-parametrique) => AUC interne = 1.0 (leakage).
+        # On utilise cv='prefit' : le XGBoost est entraine sur X_tr, puis l'isotonique
+        # est ajuste sur X_cal (20% du train), puis evalue sur X_test (totalement separe).
+        print("   - Split train/calibration (80/20 interne pour eviter le leakage isotonique)...")
+        X_tr, X_cal, Y_tr, Y_cal = train_test_split(
+            X_train, Y_train, test_size=0.2, random_state=0,
+            stratify=Y_train[:, 0]
+        )
+        print(f"   - Train effectif: {len(X_tr)}, Calibration: {len(X_cal)}")
+
         model = MultiOutputClassifier(base_xgb, n_jobs=1)
-        model.fit(X_train, Y_train)
+        model.fit(X_tr, Y_tr)
 
         # --- Feature importances (extraites du modele brut, avant calibration) ---
         raw_importances = np.zeros(len(feature_columns))
@@ -91,13 +105,14 @@ class ModelTrainer:
             raw_importances += est.feature_importances_
         raw_importances /= len(model.estimators_)
 
-        # --- Calibration de chaque sous-estimateur (cv=3 isotonique) ---
-        # Chaque sous-XGBoost est recalibre via 3-fold CV sur les donnees d'entrainement.
-        # Ca aligne la proba sortie par le modele sur la frequence reelle observee.
-        print("   - Calibration isotonique des probabilites (cv=3)...")
+        # --- Calibration de chaque sous-estimateur ---
+        # Dans scikit-learn moderne (1.6+), pour calibrer un estimateur pre-entraine sans
+        # le re-entrainer ni causer de fuite de donnees (leakage), on l'enveloppe dans un
+        # FrozenEstimator. La calibration isotonique s'ajuste alors uniquement sur X_cal.
+        print("   - Calibration isotonique sur split dedie via FrozenEstimator...")
         for i, est in enumerate(model.estimators_):
-            cal = CalibratedClassifierCV(est, cv=3, method='isotonic')
-            cal.fit(X_train, Y_train[:, i])
+            cal = CalibratedClassifierCV(FrozenEstimator(est), method='isotonic')
+            cal.fit(X_cal, Y_cal[:, i])
             model.estimators_[i] = cal
 
         # --- Evaluation sur le jeu de test ---

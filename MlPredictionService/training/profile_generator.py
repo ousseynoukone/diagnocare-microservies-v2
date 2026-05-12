@@ -35,7 +35,7 @@ DISEASE_CATEGORIES = {
                   'smoking': [0.65, 0.35], 'sedentarite': [0.40, 0.35, 0.25],
                   'weight_offset': -3, 'family_yes': 0.35, 'outcome_pos': 0.45},
 
-    'metabolic': {'keywords': ['diabetes', 'thyroid'],
+    'metabolic': {'keywords': ['diabetes', 'thyroid', 'hypoglycemia'],  # hypoglycemia ajoutee
                   'age_mean': 42, 'age_std': 14, 'age_min': 20, 'age_max': 75,
                   'bp': [0.20, 0.40, 0.40], 'chol': [0.20, 0.40, 0.40],
                   'smoking': [0.50, 0.50], 'sedentarite': [0.25, 0.40, 0.35],

@@ -157,6 +157,14 @@ def prepare_data(
     print(f"   - Forme finale: {df_features.shape}")
 
     # ---- 9. Encodage des cibles ----
+    # IMPORTANT : normaliser la casse ET les espaces avant le fit du LabelEncoder.
+    # Sans ça, 'hepatitis A' (minuscule h) se retrouve à l'index 40 (dernier, tri ASCII)
+    # alors que 'Hepatitis B/C/D/E' sont aux indices 19-22. Le modèle entraîne correctement
+    # mais lors du calcul AUC on compare y_true==40 avec probs[:,40] qui contient une
+    # classe quasi-jamais prédite → AUC ≈ 0.03 (signal inversé : 1 - 0.97).
+    # str.strip() résout aussi 'Diabetes ' et 'Hypertension ' (espaces en fin).
+    df_aug['Disease'] = df_aug['Disease'].str.strip().str.title()
+
     le_disease = LabelEncoder()
     le_specialist = LabelEncoder()
     y_disease = le_disease.fit_transform(df_aug['Disease'])
