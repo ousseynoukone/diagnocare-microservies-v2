@@ -105,15 +105,18 @@ class ModelTrainer:
             raw_importances += est.feature_importances_
         raw_importances /= len(model.estimators_)
 
-        # --- Calibration de chaque sous-estimateur ---
-        # Dans scikit-learn moderne (1.6+), pour calibrer un estimateur pre-entraine sans
-        # le re-entrainer ni causer de fuite de donnees (leakage), on l'enveloppe dans un
-        # FrozenEstimator. La calibration isotonique s'ajuste alors uniquement sur X_cal.
-        print("   - Calibration isotonique sur split dedie via FrozenEstimator...")
-        for i, est in enumerate(model.estimators_):
-            cal = CalibratedClassifierCV(FrozenEstimator(est), method='isotonic')
-            cal.fit(X_cal, Y_cal[:, i])
-            model.estimators_[i] = cal
+        # --- Calibration du sous-estimateur maladie uniquement ---
+        # Seul l'estimateur maladie (index 0) est calibre : c'est la probabilite
+        # qui a une valeur clinique (confiance du diagnostic).
+        # L'estimateur specialiste (index 1) reste brut car le specialiste est
+        # une fonction deterministe de la maladie (mapping Doctor_Versus_Disease.csv),
+        # calibrer ses probas n'apporte rien et gaspille des donnees de calibration.
+        print("   - Calibration isotonique sur l'estimateur maladie uniquement (FrozenEstimator)...")
+        est_disease = model.estimators_[0]
+        cal = CalibratedClassifierCV(FrozenEstimator(est_disease), method='isotonic')
+        cal.fit(X_cal, Y_cal[:, 0])
+        model.estimators_[0] = cal
+        print("   - Estimateur specialiste laisse brut (mapping deterministe).")
 
         # --- Evaluation sur le jeu de test ---
         evaluate_and_report(

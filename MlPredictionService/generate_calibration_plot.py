@@ -193,61 +193,50 @@ def main():
     print("4. Prédictions calibrées…")
     proba_list_cal = model.predict_proba(X_test)
     probs_disease_cal    = proba_list_cal[0]   # shape (n_test, n_diseases)
-    probs_specialist_cal = proba_list_cal[1]   # shape (n_test, n_specialists)
 
     # ---- 5. Probabilités brutes (bypass calibration) ----
     print("5. Extraction des probabilités XGBoost brutes…")
     raw_list = _get_uncalibrated_probs(model, X_test)
     probs_disease_raw    = raw_list[0]
-    probs_specialist_raw = raw_list[1]
 
-    # ---- 6. Sélection des classes les plus intéressantes ----
-    print("6. Sélection des classes avec le plus grand ECE…")
+    # ---- 6. Sélection de la maladie la plus intéressante ----
+    # (seule la maladie est calibrée, le spécialiste reste brut)
+    print("6. Sélection de la maladie avec le plus grand ECE…")
     cls_d = _pick_worst_disease(probs_disease_raw, Y_test, le_disease)
-    cls_s = _pick_worst_specialist(probs_specialist_raw, Y_test, le_specialist)
 
     disease_name    = le_disease.classes_[cls_d]
-    specialist_name = le_specialist.classes_[cls_s]
-    print(f"   -> Maladie selectionnee    : {disease_name}")
-    print(f"   -> Specialiste selectionne : {specialist_name}")
+    print(f"   -> Maladie selectionnee : {disease_name}")
 
     y_bin_disease    = (Y_test[:, 0] == cls_d).astype(int)
-    y_bin_specialist = (Y_test[:, 1] == cls_s).astype(int)
 
     # ---- 7. Figure ----
     print("7. Tracé de la figure…")
-    fig = plt.figure(figsize=(12, 8), facecolor='white')
+    fig = plt.figure(figsize=(7, 8), facecolor='white')
     fig.suptitle(
-        'DiagnoCare — Courbes de calibration (probabilités)',
+        'DiagnoCare — Courbe de calibration (maladie)',
         fontsize=13, fontweight='bold', y=0.98
     )
 
     # Sous-titre général
     subtitle = (
         "XGBoost multi-output (n_estimators=400, max_depth=8) ; "
-        "isotonique sur 35% ; tracé = hold-out"
+        "isotonique sur 20% ; tracé = hold-out"
     )
 
     gs_top = gridspec.GridSpec(
-        2, 2,
+        2, 1,
         figure=fig,
         top=0.91, bottom=0.07,
-        left=0.07, right=0.97,
-        hspace=0.50, wspace=0.35,
+        left=0.12, right=0.95,
+        hspace=0.40,
         height_ratios=[3, 1.8]
     )
 
     ax_d_curve = fig.add_subplot(gs_top[0, 0])
-    ax_s_curve = fig.add_subplot(gs_top[0, 1])
     ax_d_hist  = fig.add_subplot(gs_top[1, 0])
-    ax_s_hist  = fig.add_subplot(gs_top[1, 1])
 
     title_disease = (
         f"Maladie — vue OvR : « {disease_name} »\n"
-        f"({subtitle})"
-    )
-    title_specialist = (
-        f"Spécialiste — vue OvR : « {specialist_name} »\n"
         f"({subtitle})"
     )
 
@@ -259,19 +248,10 @@ def main():
         title_disease
     )
 
-    _plot_reliability_panel(
-        ax_s_curve, ax_s_hist,
-        probs_specialist_raw[:, cls_s],
-        probs_specialist_cal[:, cls_s],
-        y_bin_specialist,
-        title_specialist
-    )
-
     # Note de bas de page
     note = (
-        "Classe de référence = prévalence ~50% sur le train (OvR) ; isotonique : "
-        "jeu de calibration disjoint du XGBoost brut (3-fold) ; "
-        "XGBoost multi-sortie sauvegardé, sans co-pipeline graphique."
+        "Calibration isotonique appliquée uniquement sur l'estimateur maladie ; "
+        "le spécialiste est un mapping déterministe de la maladie (non calibré)."
     )
     fig.text(0.5, 0.01, note, ha='center', fontsize=6.5, color='#555555', style='italic')
 
