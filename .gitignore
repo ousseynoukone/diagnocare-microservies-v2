@@ -6,3 +6,4 @@ MlPredictionService/.DS_Store
 **/target/
 *.class
 
+.env
