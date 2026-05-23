@@ -22,6 +22,7 @@ import org.springframework.stereotype.Service;
 
 import java.util.Date;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
@@ -135,6 +136,15 @@ public class AuthService {
                 .orElseThrow(() -> new AppException(HttpStatus.NOT_FOUND, "User not found"));
         userRepository.delete(user);
         sendUserEvent(KafkaEvent.USER_DELETED, user, false);
+    }
+
+    public List<User> getAllUsers() {
+        return userRepository.findAll();
+    }
+
+    public User getUserById(Long id) {
+        return userRepository.findById(id)
+                .orElseThrow(() -> new AppException(HttpStatus.NOT_FOUND, "User not found"));
     }
 
     public Object validateToken(String token) {

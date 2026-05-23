@@ -33,7 +33,7 @@ public class User extends BaseEntity{
     @Column(length = 255)
     private String address;
 
-    @Column(length = 13)
+    @Column(length = 20)
     private String phoneNumber;
 
     @Column(length = 5)

@@ -7,10 +7,11 @@ import sys
 import joblib
 import numpy as np
 import pandas as pd
-from sklearn.ensemble import RandomForestClassifier
-from sklearn.metrics import accuracy_score
+from sklearn.metrics import accuracy_score, roc_auc_score
 from sklearn.model_selection import train_test_split
+from sklearn.multioutput import MultiOutputClassifier
 from sklearn.preprocessing import LabelEncoder, MultiLabelBinarizer, StandardScaler
+from xgboost import XGBClassifier
 
 # Ajout du répertoire parent au path pour les imports
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -124,19 +125,31 @@ class ModelTrainer:
 
         print(f"   - Forme finale des features: {df_features.shape}")
 
-        print("\n6. Entraînement du modèle...")
-        X_train, X_test, Y_train, Y_test = train_test_split(
-            df_features, Y_combined, test_size=0.2, random_state=42
+        print("\n6. Entraînement du modèle XGBoost...")
+        sample_indices = np.arange(len(df_features))
+        X_train, X_test, Y_train, Y_test, _, test_indices = train_test_split(
+            df_features,
+            Y_combined,
+            sample_indices,
+            test_size=0.2,
+            random_state=42,
+            stratify=Y_combined[:, 0],
         )
 
-        model = RandomForestClassifier(
-            n_estimators=200,
-            max_depth=15,
-            min_samples_split=10,
-            min_samples_leaf=5,
+        xgb_params = dict(
+            objective="multi:softprob",
+            eval_metric="mlogloss",
+            n_estimators=350,
+            max_depth=8,
+            learning_rate=0.07,
+            subsample=0.9,
+            colsample_bytree=0.9,
             random_state=42,
             n_jobs=-1,
+            tree_method="hist",
+            missing=np.nan,
         )
+        model = MultiOutputClassifier(XGBClassifier(**xgb_params))
         model.fit(X_train, Y_train)
 
         Y_pred = model.predict(X_test)
@@ -144,6 +157,26 @@ class ModelTrainer:
         acc_specialist = accuracy_score(Y_test[:, 1], Y_pred[:, 1])
         print(f"   - Précision Maladie (hold-out): {acc_disease*100:.2f}%")
         print(f"   - Précision Spécialiste (hold-out): {acc_specialist*100:.2f}%")
+
+        print("\n6b. Calcul de l'AUC (macro OvR)...")
+        probs = model.predict_proba(X_test)
+        disease_probs = probs[0]
+        specialist_probs = probs[1]
+
+        auc_disease = roc_auc_score(
+            Y_test[:, 0],
+            disease_probs,
+            multi_class="ovr",
+            average="macro",
+        )
+        auc_specialist = roc_auc_score(
+            Y_test[:, 1],
+            specialist_probs,
+            multi_class="ovr",
+            average="macro",
+        )
+        print(f"   - AUC Maladie (macro OvR): {auc_disease:.6f}")
+        print(f"   - AUC Spécialiste (macro OvR): {auc_specialist:.6f}")
 
         print("\n7. Sauvegarde des artefacts...")
         os.makedirs(self.config.MODELS_DIR, exist_ok=True)
@@ -156,6 +189,9 @@ class ModelTrainer:
 
         feature_columns = df_features.columns.tolist()
         joblib.dump(feature_columns, self.config.get_model_path('feature_columns'))
+        np.save(os.path.join(self.config.DATA_DIR, "test_indices.npy"), test_indices)
+        np.save(os.path.join(self.config.DATA_DIR, "X_test.npy"), X_test.to_numpy())
+        np.save(os.path.join(self.config.DATA_DIR, "Y_test.npy"), Y_test)
 
         print(f"   - Tous les artefacts sauvegardés dans {self.config.MODELS_DIR}/")
 

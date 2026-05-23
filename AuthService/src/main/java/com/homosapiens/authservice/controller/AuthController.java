@@ -28,6 +28,7 @@ import org.springframework.validation.BindingResult;
 import org.springframework.web.bind.annotation.*;
 import jakarta.servlet.http.HttpServletRequest;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -96,6 +97,18 @@ public class AuthController {
     public ResponseEntity<?> deleteUser(@PathVariable Long id) {
         authService.deleteUser(id);
         return ResponseEntity.noContent().build();
+    }
+
+    @GetMapping("users")
+    @Operation(summary = "Get users", description = "List all users")
+    public ResponseEntity<?> getUsers() {
+        return ResponseEntity.ok(authService.getAllUsers());
+    }
+
+    @GetMapping("users/{id}")
+    @Operation(summary = "Get user by id", description = "Get one user by id")
+    public ResponseEntity<?> getUserById(@PathVariable Long id) {
+        return ResponseEntity.ok(authService.getUserById(id));
     }
 
     @PostMapping("refresh-token")
