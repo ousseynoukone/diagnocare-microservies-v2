@@ -11,6 +11,7 @@ import com.homosapiens.authservice.model.dtos.UserRegisterDto;
 import com.homosapiens.authservice.model.dtos.UserUpdateDto;
 import com.homosapiens.authservice.model.dtos.OtpSendRequest;
 import com.homosapiens.authservice.model.dtos.OtpValidateRequest;
+import com.homosapiens.authservice.model.dtos.ResetPasswordRequestDto;
 import com.homosapiens.authservice.service.AuthService;
 import com.homosapiens.authservice.service.helpers.ValidationHelper;
 import com.homosapiens.authservice.core.locale.LanguageUtil;
@@ -141,6 +142,22 @@ public class AuthController {
                 CustomResponseEntity.builder()
                         .statusCode(HttpStatus.OK.value())
                         .message(LanguageUtil.translateMessage("OTP validated", LanguageUtil.resolveLang(httpRequest)))
+                        .build()
+        );
+    }
+
+    @PostMapping("reset-password")
+    @Operation(summary = "Reset password", description = "Reset user password using OTP verification")
+    public ResponseEntity<?> resetPassword(@RequestBody @Valid ResetPasswordRequestDto request, BindingResult bindingResult, HttpServletRequest httpRequest) {
+        if (bindingResult.hasErrors()) {
+            return ValidationHelper.buildValidationReponse(bindingResult, LanguageUtil.resolveLang(httpRequest));
+        }
+        String lang = LanguageUtil.resolveLang(httpRequest);
+        authService.resetPassword(request.getEmail(), request.getCode(), request.getNewPassword(), lang);
+        return ResponseEntity.ok(
+                CustomResponseEntity.builder()
+                        .statusCode(HttpStatus.OK.value())
+                        .message(LanguageUtil.translateMessage("Password reset successfully", lang))
                         .build()
         );
     }

@@ -184,6 +184,22 @@ public class AuthService {
         return buildTokenResponse(customUserDetails, u);
     }
 
+    public void resetPassword(String email, String code, String newPassword, String lang) {
+        // Validate the OTP
+        otpService.validateEmailOtp(email, code);
+
+        // Retrieve user (handles email encryption lookup)
+        User user = userLookupService.findUserByEmail(email)
+                .orElseThrow(() -> new AppException(HttpStatus.NOT_FOUND, "User not found"));
+
+        // Update the encrypted password
+        user.setPassword(passwordEncoder.encode(newPassword));
+        userRepository.save(user);
+
+        // Sync with other microservices via Kafka
+        sendUserEvent(KafkaEvent.USER_UPDATE, user, true);
+    }
+
     // -------------------- Private Helpers --------------------
 
     private CustomUserDetails buildCustomUserDetails(User u) {

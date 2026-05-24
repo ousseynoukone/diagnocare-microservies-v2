@@ -7,8 +7,8 @@ services:
       POSTGRES_USER: ${AUTH_DB_USERNAME}
       POSTGRES_PASSWORD: ${AUTH_DB_PASSWORD}
     # Internal only (do not expose in deployment)
-    ports:
-      - ${AUTH_DIAGNOCARE_DB_PORT}:5432
+    # ports:
+    #   - ${AUTH_DIAGNOCARE_DB_PORT}:5432
     volumes:
       - auth_postgres_data:/var/lib/postgresql/data
     healthcheck:
@@ -25,8 +25,8 @@ services:
       POSTGRES_USER: ${DB_USERNAME}
       POSTGRES_PASSWORD: ${DB_PASSWORD}
     # Internal only (do not expose in deployment)
-    ports:
-      - ${DIAGNOCARE_DB_PORT}:5432
+    # ports:
+    #   - ${DIAGNOCARE_DB_PORT}:5432
 
     volumes:
       - diagnocare_postgres_data:/var/lib/postgresql/data
