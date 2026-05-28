@@ -139,12 +139,6 @@ public class AuthController {
         return ResponseEntity.ok(Map.of("user", authResponse.get("user")));
     }
 
-    @PostMapping("logout")
-    @Operation(summary = "Logout", description = "Clear auth cookies and invalidate the session")
-    public ResponseEntity<?> logout(HttpServletResponse response) {
-        clearTokenCookies(response);
-        return ResponseEntity.ok(Map.of("message", "Logged out successfully"));
-    }
 
     @PostMapping("otp/send")
     @Operation(summary = "Send OTP", description = "Send email verification OTP")
@@ -206,6 +200,18 @@ public class AuthController {
             // Delegate token validation to userAuthProvider
             return ResponseEntity.ok().body(authService.validateToken(token));
 
+    }
+
+    @PostMapping("logout")
+    @Operation(summary = "Logout", description = "Clear HttpOnly cookies and end session")
+    public ResponseEntity<?> logout(HttpServletResponse response) {
+        clearTokenCookies(response);
+        return ResponseEntity.ok(
+                CustomResponseEntity.builder()
+                        .statusCode(HttpStatus.OK.value())
+                        .message("Logout successful")
+                        .build()
+        );
     }
 
     // ─── Private helpers ─────────────────────────────────────────────────────────

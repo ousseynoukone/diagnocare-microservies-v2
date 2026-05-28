@@ -32,7 +32,8 @@ public class SecurityConfig {
                             .requestMatchers("/swagger-ui/**", "/swagger-ui.html", "/v3/api-docs/**", "/swagger-resources/**", "/webjars/**").permitAll()
                             .requestMatchers(HttpMethod.POST,"/login", "/validate-token", "/register","/refresh-token","/otp/send", "/otp/validate", "/reset-password", "/logout").permitAll()
                             .requestMatchers(HttpMethod.GET, "/roles/**").permitAll()
-                            .anyRequest().authenticated());
+                            .anyRequest().authenticated())
+                    .logout(logout -> logout.disable());
 
             return  http.build();
         } catch (Exception e) {
