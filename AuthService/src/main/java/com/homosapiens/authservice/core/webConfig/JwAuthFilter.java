@@ -21,25 +21,42 @@ public class JwAuthFilter extends OncePerRequestFilter {
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain) throws ServletException, IOException {
         String header = request.getHeader(HttpHeaders.AUTHORIZATION);
-        if(header!=null){
+        String token = null;
+
+        if (header != null) {
             String[] authElements = header.split(" ");
-            if(authElements.length==2  && "Bearer".equals(authElements[0])){
-                try {
-                    SecurityContextHolder.getContext().
-                            setAuthentication(jwtAuthProvider.validateToken(authElements[1]));
-                } catch (AppException e) {
-                    SecurityContextHolder.clearContext();
-                    response.setStatus(HttpStatus.UNAUTHORIZED.value());
-                    response.setContentType("application/json");
-                    response.getWriter().write("{\"error\": \"" + e.getMessage() + "\"}");
-                    return;
-                } catch (Exception e) {
-                    SecurityContextHolder.clearContext();
-                    response.setStatus(HttpStatus.INTERNAL_SERVER_ERROR.value());
-                    response.setContentType("application/json");
-                    response.getWriter().write("{\"error\": \"" + e.getMessage() + "\"}");
-                    return;
+            if (authElements.length == 2 && "Bearer".equals(authElements[0])) {
+                token = authElements[1];
+            }
+        } else {
+            // Fall back to token cookie
+            jakarta.servlet.http.Cookie[] cookies = request.getCookies();
+            if (cookies != null) {
+                for (jakarta.servlet.http.Cookie cookie : cookies) {
+                    if ("token".equals(cookie.getName())) {
+                        token = cookie.getValue();
+                        break;
+                    }
                 }
+            }
+        }
+
+        if (token != null && !token.trim().isEmpty()) {
+            try {
+                SecurityContextHolder.getContext().
+                        setAuthentication(jwtAuthProvider.validateToken(token));
+            } catch (AppException e) {
+                SecurityContextHolder.clearContext();
+                response.setStatus(HttpStatus.UNAUTHORIZED.value());
+                response.setContentType("application/json");
+                response.getWriter().write("{\"error\": \"" + e.getMessage() + "\"}");
+                return;
+            } catch (Exception e) {
+                SecurityContextHolder.clearContext();
+                response.setStatus(HttpStatus.INTERNAL_SERVER_ERROR.value());
+                response.setContentType("application/json");
+                response.getWriter().write("{\"error\": \"" + e.getMessage() + "\"}");
+                return;
             }
         }
         filterChain.doFilter(request, response);

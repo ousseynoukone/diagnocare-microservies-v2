@@ -52,18 +52,38 @@ public class AuthFilter extends AbstractGatewayFilterFactory<AuthFilter.Config> 
             if (isPublicAuthPath(path)) {
                 return chain.filter(exchange);
             }
+
+            // Determine which exchange to use — either original (with Bearer header)
+            // or a mutated one built from the HttpOnly cookie token
+            final org.springframework.web.server.ServerWebExchange resolvedExchange;
+
             if (!exchange.getRequest().getHeaders().containsKey(HttpHeaders.AUTHORIZATION)) {
-                return createErrorResponse(exchange, HttpStatus.UNAUTHORIZED, "Missing Authorization header");
+                // Fall back to reading the token from the HttpOnly cookie
+                String tokenFromCookie = exchange.getRequest().getCookies().getFirst("token") != null
+                        ? exchange.getRequest().getCookies().getFirst("token").getValue()
+                        : null;
+
+                if (tokenFromCookie == null || tokenFromCookie.isBlank()) {
+                    return createErrorResponse(exchange, HttpStatus.UNAUTHORIZED, "Missing Authorization header or token cookie");
+                }
+
+                // Inject a synthetic Authorization header so the rest of the filter works unchanged
+                var mutatedRequest = exchange.getRequest().mutate()
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + tokenFromCookie)
+                        .build();
+                resolvedExchange = exchange.mutate().request(mutatedRequest).build();
+            } else {
+                resolvedExchange = exchange;
             }
 
-            String authHeader = exchange.getRequest().getHeaders().getFirst(HttpHeaders.AUTHORIZATION);
+            String authHeader = resolvedExchange.getRequest().getHeaders().getFirst(HttpHeaders.AUTHORIZATION);
             if (authHeader == null || !authHeader.startsWith("Bearer ")) {
-                return createErrorResponse(exchange, HttpStatus.UNAUTHORIZED, "Invalid Authorization header format");
+                return createErrorResponse(resolvedExchange, HttpStatus.UNAUTHORIZED, "Invalid Authorization header format");
             }
 
             String token = authHeader.substring(7); // Remove "Bearer "
 
-            log.debug("Validating token for request to {}", exchange.getRequest().getURI());
+            log.debug("Validating token for request to {}", resolvedExchange.getRequest().getURI());
 
             return webClientBuilder.build()
                     .post()
@@ -97,26 +117,27 @@ public class AuthFilter extends AbstractGatewayFilterFactory<AuthFilter.Config> 
                     .bodyToMono(UserDto.class)
                     .flatMap(userDto -> {
                         log.debug("Token validation successful for user {} in request to {}",
-                                userDto.getEmail(), exchange.getRequest().getURI());
+                                userDto.getEmail(), resolvedExchange.getRequest().getURI());
 
-                        var mutatedRequest = exchange.getRequest().mutate()
+                        var mutatedRequest = resolvedExchange.getRequest().mutate()
                                 .header("x-auth-user-id", String.valueOf(userDto.getId()))
                                 .header("x-auth-user-email", userDto.getEmail())
                                 .header("x-auth-user-role", userDto.getRole())
                                 .header("x-auth-user-lang", userDto.getLang() != null ? userDto.getLang() : "fr")
                                 .build();
 
-                        return chain.filter(exchange.mutate().request(mutatedRequest).build());
+                        return chain.filter(resolvedExchange.mutate().request(mutatedRequest).build());
                     })
                     .onErrorResume(e -> {
                         if (e instanceof AuthServiceException authEx) {
-                            return createErrorResponse(exchange, authEx.getStatus(), authEx.getMessage());
+                            return createErrorResponse(resolvedExchange, authEx.getStatus(), authEx.getMessage());
                         }
                         log.error("Unexpected error during token validation", e);
-                        return createErrorResponse(exchange, HttpStatus.INTERNAL_SERVER_ERROR, "Unexpected error");
+                        return createErrorResponse(resolvedExchange, HttpStatus.INTERNAL_SERVER_ERROR, "Unexpected error");
                     });
         };
     }
+
 
     private HttpStatus toHttpStatus(HttpStatusCode statusCode) {
         HttpStatus status = HttpStatus.resolve(statusCode.value());
@@ -219,6 +240,7 @@ public class AuthFilter extends AbstractGatewayFilterFactory<AuthFilter.Config> 
                 || path.startsWith("/api/v1/auth/register")
                 || path.startsWith("/api/v1/auth/refresh")
                 || path.startsWith("/api/v1/auth/validate")
+                || path.startsWith("/api/v1/auth/logout")
                 || path.startsWith("/api/v1/auth/swagger-ui")
                 || path.startsWith("/api/v1/auth/v3/api-docs")
                 || path.startsWith("/api/v1/auth/swagger-ui.html");
