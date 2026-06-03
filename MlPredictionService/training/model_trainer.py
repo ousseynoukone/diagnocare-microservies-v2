@@ -19,7 +19,6 @@ import pandas as pd
 import numpy as np
 from sklearn.model_selection import train_test_split
 from sklearn.calibration import CalibratedClassifierCV
-from sklearn.frozen import FrozenEstimator
 from sklearn.multioutput import MultiOutputClassifier
 from xgboost import XGBClassifier
 
@@ -111,9 +110,9 @@ class ModelTrainer:
         # L'estimateur specialiste (index 1) reste brut car le specialiste est
         # une fonction deterministe de la maladie (mapping Doctor_Versus_Disease.csv),
         # calibrer ses probas n'apporte rien et gaspille des donnees de calibration.
-        print("   - Calibration isotonique sur l'estimateur maladie uniquement (FrozenEstimator)...")
+        print("   - Calibration isotonique sur l'estimateur maladie uniquement (cv='prefit')...")
         est_disease = model.estimators_[0]
-        cal = CalibratedClassifierCV(FrozenEstimator(est_disease), method='isotonic')
+        cal = CalibratedClassifierCV(estimator=est_disease, method='isotonic', cv='prefit')
         cal.fit(X_cal, Y_cal[:, 0])
         model.estimators_[0] = cal
         print("   - Estimateur specialiste laisse brut (mapping deterministe).")
