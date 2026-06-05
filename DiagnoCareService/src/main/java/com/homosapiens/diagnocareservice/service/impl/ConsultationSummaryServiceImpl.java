@@ -439,7 +439,7 @@ public class ConsultationSummaryServiceImpl implements ConsultationSummaryServic
     }
 
     private void applyTimeline(ConsultationSummaryDTO summary, Prediction prediction, User user, String language) {
-        List<Prediction> predictions = predictionRepository.findBySessionSymptomUserId(user.getId());
+        List<Prediction> predictions = predictionRepository.findBySessionSymptomUserIdAndDeletedFalse(user.getId());
         if (predictions == null || predictions.isEmpty() || prediction == null) {
             summary.setTimeline(new ArrayList<>());
             return;

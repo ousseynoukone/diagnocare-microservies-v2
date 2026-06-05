@@ -181,7 +181,7 @@ public class CheckInServiceImpl implements CheckInService {
         if (previousPrediction == null) {
             return null;
         }
-        List<Prediction> children = predictionRepository.findByPreviousPredictionId(previousPrediction.getId());
+        List<Prediction> children = predictionRepository.findByPreviousPredictionIdAndDeletedFalse(previousPrediction.getId());
         return children.stream()
                 .max(Comparator.comparing(Prediction::getCreatedDate, Comparator.nullsLast(LocalDateTime::compareTo)))
                 .orElse(null);

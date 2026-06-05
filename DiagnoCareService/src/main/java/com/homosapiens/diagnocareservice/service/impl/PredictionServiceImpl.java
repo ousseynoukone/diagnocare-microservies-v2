@@ -42,7 +42,7 @@ public class PredictionServiceImpl implements PredictionService {
 
         // Handle previous prediction relationship
         if (requestDTO.getPreviousPredictionId() != null) {
-            Prediction previousPrediction = predictionRepository.findById(requestDTO.getPreviousPredictionId())
+            Prediction previousPrediction = predictionRepository.findByIdAndDeletedFalse(requestDTO.getPreviousPredictionId())
                     .orElseThrow(() -> new AppException(HttpStatus.NOT_FOUND, 
                             "Previous prediction not found with id: " + requestDTO.getPreviousPredictionId()));
             prediction.setPreviousPrediction(previousPrediction);
@@ -63,7 +63,7 @@ public class PredictionServiceImpl implements PredictionService {
 
     @Override
     public Prediction updatePrediction(Long id, PredictionRequestDTO requestDTO) {
-        Prediction prediction = predictionRepository.findById(id)
+        Prediction prediction = predictionRepository.findByIdAndDeletedFalse(id)
                 .orElseThrow(() -> new AppException(HttpStatus.NOT_FOUND, 
                         "Prediction not found with id: " + id));
 
@@ -77,7 +77,7 @@ public class PredictionServiceImpl implements PredictionService {
             prediction.setComment(requestDTO.getComment());
         }
         if (requestDTO.getPreviousPredictionId() != null) {
-            Prediction previousPrediction = predictionRepository.findById(requestDTO.getPreviousPredictionId())
+            Prediction previousPrediction = predictionRepository.findByIdAndDeletedFalse(requestDTO.getPreviousPredictionId())
                     .orElseThrow(() -> new AppException(HttpStatus.NOT_FOUND, 
                             "Previous prediction not found with id: " + requestDTO.getPreviousPredictionId()));
             prediction.setPreviousPrediction(previousPrediction);
@@ -88,37 +88,46 @@ public class PredictionServiceImpl implements PredictionService {
 
     @Override
     public void deletePrediction(Long id) {
-        predictionRepository.deleteById(id);
+        int updated = predictionRepository.softDeleteById(id);
+        if (updated == 0) {
+            throw new AppException(HttpStatus.NOT_FOUND,
+                    "Prediction not found with id: " + id);
+        }
+    }
+
+    @Override
+    public void deletePredictionsByUserId(Long userId) {
+        predictionRepository.softDeleteByUserId(userId);
     }
 
     @Override
     @Transactional(readOnly = true)
     public Optional<Prediction> getPredictionById(Long id) {
-        return predictionRepository.findById(id);
+        return predictionRepository.findByIdAndDeletedFalse(id);
     }
 
     @Override
     @Transactional(readOnly = true)
     public List<Prediction> getAllPredictions() {
-        return predictionRepository.findAll();
+        return predictionRepository.findByDeletedFalse();
     }
 
     @Override
     @Transactional(readOnly = true)
     public List<Prediction> getRedAlertPredictions() {
-        return predictionRepository.findByIsRedAlert(true);
+        return predictionRepository.findByIsRedAlertAndDeletedFalse(true);
     }
 
     @Override
     @Transactional(readOnly = true)
     public List<Prediction> getPredictionsBySessionSymptomId(Long sessionSymptomId) {
-        return predictionRepository.findBySessionSymptomId(sessionSymptomId);
+        return predictionRepository.findBySessionSymptomIdAndDeletedFalse(sessionSymptomId);
     }
 
     @Override
     @Transactional(readOnly = true)
     public List<Prediction> getPredictionsByUserId(Long userId) {
-        return predictionRepository.findBySessionSymptomUserId(userId);
+        return predictionRepository.findBySessionSymptomUserIdAndDeletedFalse(userId);
     }
 
     @Override

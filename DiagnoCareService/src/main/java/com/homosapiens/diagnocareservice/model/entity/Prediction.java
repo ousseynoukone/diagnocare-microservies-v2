@@ -22,6 +22,9 @@ public class Prediction extends BaseEntity {
     @Column(name = "is_red_alert")
     private Boolean isRedAlert = false;
 
+    @Column(name = "deleted", nullable = false)
+    private Boolean deleted = false;
+
     @Column(name = "comment", columnDefinition = "TEXT")
     private String comment;
 

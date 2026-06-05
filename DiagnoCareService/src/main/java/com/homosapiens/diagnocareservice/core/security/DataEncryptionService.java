@@ -28,6 +28,10 @@ public class DataEncryptionService {
         if (secretKeyString == null || secretKeyString.isEmpty()) {
             throw new IllegalStateException("Encryption secret key must be configured. Set encryption.secret-key property.");
         }
+        // Strip surrounding quotes if present
+        if (secretKeyString.startsWith("\"") && secretKeyString.endsWith("\"")) {
+            secretKeyString = secretKeyString.substring(1, secretKeyString.length() - 1);
+        }
         this.secretKey = new SecretKeySpec(Base64.getDecoder().decode(secretKeyString), ALGORITHM);
     }
 

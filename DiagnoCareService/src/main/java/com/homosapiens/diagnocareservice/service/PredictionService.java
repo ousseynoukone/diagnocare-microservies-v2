@@ -11,6 +11,7 @@ public interface PredictionService {
     Prediction createPrediction(PredictionRequestDTO requestDTO);
     Prediction updatePrediction(Long id, PredictionRequestDTO requestDTO);
     void deletePrediction(Long id);
+    void deletePredictionsByUserId(Long userId);
     Optional<Prediction> getPredictionById(Long id);
     List<Prediction> getAllPredictions();
     List<Prediction> getRedAlertPredictions();

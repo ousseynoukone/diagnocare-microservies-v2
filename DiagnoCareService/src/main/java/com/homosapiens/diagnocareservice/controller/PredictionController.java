@@ -88,6 +88,14 @@ public class PredictionController {
         return ResponseEntity.noContent().build();
     }
 
+    @DeleteMapping("/user/{userId}")
+    @Operation(summary = "Delete all predictions of a user", description = "Deletes all predictions for a specific user ID")
+    public ResponseEntity<Void> deletePredictionsByUserId(
+            @Parameter(description = "User ID") @PathVariable Long userId) {
+        predictionService.deletePredictionsByUserId(userId);
+        return ResponseEntity.noContent().build();
+    }
+
     @GetMapping("/{id}")
     @Operation(summary = "Get prediction by ID", description = "Retrieves a prediction by its ID")
     public ResponseEntity<PredictionDTO> getPredictionById(

@@ -14,4 +14,6 @@ public class PathologyResultDTO {
     private Long doctorId;
     private String doctorSpecialistLabel;
     private String predictionId;
+    private String localizedDiseaseName;
+    private String localizedSpecialistLabel;
 }

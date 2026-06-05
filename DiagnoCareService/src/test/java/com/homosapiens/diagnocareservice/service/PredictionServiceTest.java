@@ -107,7 +107,7 @@ class PredictionServiceTest {
         updatedPrediction.setIsRedAlert(true);
         updatedPrediction.setComment("Updated comment");
 
-        when(predictionRepository.findById(predictionId)).thenReturn(Optional.of(existingPrediction));
+        when(predictionRepository.findByIdAndDeletedFalse(predictionId)).thenReturn(Optional.of(existingPrediction));
         when(predictionRepository.save(any(Prediction.class))).thenReturn(updatedPrediction);
 
         Prediction result = predictionService.updatePrediction(predictionId, requestDTO);
@@ -115,7 +115,7 @@ class PredictionServiceTest {
         assertNotNull(result);
         assertEquals(new BigDecimal("0.90"), result.getBestScore());
         assertTrue(result.getIsRedAlert());
-        verify(predictionRepository).findById(predictionId);
+        verify(predictionRepository).findByIdAndDeletedFalse(predictionId);
         verify(predictionRepository).save(any(Prediction.class));
     }
 
@@ -124,24 +124,56 @@ class PredictionServiceTest {
         Long predictionId = 999L;
         PredictionRequestDTO requestDTO = new PredictionRequestDTO();
 
-        when(predictionRepository.findById(predictionId)).thenReturn(Optional.empty());
+        when(predictionRepository.findByIdAndDeletedFalse(predictionId)).thenReturn(Optional.empty());
 
         AppException exception = assertThrows(AppException.class, 
             () -> predictionService.updatePrediction(predictionId, requestDTO));
 
         assertEquals(HttpStatus.NOT_FOUND, exception.getStatus());
         assertTrue(exception.getMessage().contains("Prediction not found"));
-        verify(predictionRepository).findById(predictionId);
+        verify(predictionRepository).findByIdAndDeletedFalse(predictionId);
         verify(predictionRepository, never()).save(any(Prediction.class));
     }
 
     @Test
     void deletePrediction_ShouldDeletePrediction_WhenPredictionExists() {
         Long predictionId = 1L;
+        Prediction prediction = new Prediction();
+        prediction.setId(predictionId);
+        prediction.setDeleted(false);
+
+        when(predictionRepository.findByIdAndDeletedFalse(predictionId)).thenReturn(Optional.of(prediction));
+        when(predictionRepository.save(any(Prediction.class))).thenReturn(prediction);
 
         predictionService.deletePrediction(predictionId);
 
-        verify(predictionRepository).deleteById(predictionId);
+        assertTrue(prediction.getDeleted());
+        verify(predictionRepository).findByIdAndDeletedFalse(predictionId);
+        verify(predictionRepository).save(any(Prediction.class));
+    }
+
+    @Test
+    void deletePredictionsByUserId_ShouldDeleteAllPredictions_WhenUserIdProvided() {
+        Long userId = 1L;
+        Prediction prediction1 = new Prediction();
+        prediction1.setId(1L);
+        prediction1.setDeleted(false);
+
+        Prediction prediction2 = new Prediction();
+        prediction2.setId(2L);
+        prediction2.setDeleted(false);
+
+        List<Prediction> predictions = Arrays.asList(prediction1, prediction2);
+
+        when(predictionRepository.findBySessionSymptomUserIdAndDeletedFalse(userId)).thenReturn(predictions);
+        when(predictionRepository.saveAll(anyList())).thenReturn(predictions);
+
+        predictionService.deletePredictionsByUserId(userId);
+
+        assertTrue(prediction1.getDeleted());
+        assertTrue(prediction2.getDeleted());
+        verify(predictionRepository).findBySessionSymptomUserIdAndDeletedFalse(userId);
+        verify(predictionRepository).saveAll(anyList());
     }
 
     @Test
@@ -151,25 +183,25 @@ class PredictionServiceTest {
         prediction.setId(predictionId);
         prediction.setBestScore(new BigDecimal("0.85"));
 
-        when(predictionRepository.findById(predictionId)).thenReturn(Optional.of(prediction));
+        when(predictionRepository.findByIdAndDeletedFalse(predictionId)).thenReturn(Optional.of(prediction));
 
         Optional<Prediction> result = predictionService.getPredictionById(predictionId);
 
         assertTrue(result.isPresent());
         assertEquals(predictionId, result.get().getId());
-        verify(predictionRepository).findById(predictionId);
+        verify(predictionRepository).findByIdAndDeletedFalse(predictionId);
     }
 
     @Test
     void getPredictionById_ShouldReturnEmpty_WhenPredictionDoesNotExist() {
         Long predictionId = 999L;
 
-        when(predictionRepository.findById(predictionId)).thenReturn(Optional.empty());
+        when(predictionRepository.findByIdAndDeletedFalse(predictionId)).thenReturn(Optional.empty());
 
         Optional<Prediction> result = predictionService.getPredictionById(predictionId);
 
         assertFalse(result.isPresent());
-        verify(predictionRepository).findById(predictionId);
+        verify(predictionRepository).findByIdAndDeletedFalse(predictionId);
     }
 
     @Test
@@ -182,12 +214,12 @@ class PredictionServiceTest {
 
         List<Prediction> predictions = Arrays.asList(prediction1, prediction2);
 
-        when(predictionRepository.findAll()).thenReturn(predictions);
+        when(predictionRepository.findByDeletedFalse()).thenReturn(predictions);
 
         List<Prediction> result = predictionService.getAllPredictions();
 
         assertEquals(2, result.size());
-        verify(predictionRepository).findAll();
+        verify(predictionRepository).findByDeletedFalse();
     }
 
     @Test
@@ -198,13 +230,13 @@ class PredictionServiceTest {
 
         List<Prediction> predictions = Arrays.asList(redAlertPrediction);
 
-        when(predictionRepository.findByIsRedAlert(true)).thenReturn(predictions);
+        when(predictionRepository.findByIsRedAlertAndDeletedFalse(true)).thenReturn(predictions);
 
         List<Prediction> result = predictionService.getRedAlertPredictions();
 
         assertEquals(1, result.size());
         assertTrue(result.get(0).getIsRedAlert());
-        verify(predictionRepository).findByIsRedAlert(true);
+        verify(predictionRepository).findByIsRedAlertAndDeletedFalse(true);
     }
 
     @Test
@@ -215,12 +247,12 @@ class PredictionServiceTest {
 
         List<Prediction> predictions = Arrays.asList(prediction);
 
-        when(predictionRepository.findBySessionSymptomId(sessionSymptomId)).thenReturn(predictions);
+        when(predictionRepository.findBySessionSymptomIdAndDeletedFalse(sessionSymptomId)).thenReturn(predictions);
 
         List<Prediction> result = predictionService.getPredictionsBySessionSymptomId(sessionSymptomId);
 
         assertEquals(1, result.size());
-        verify(predictionRepository).findBySessionSymptomId(sessionSymptomId);
+        verify(predictionRepository).findBySessionSymptomIdAndDeletedFalse(sessionSymptomId);
     }
 
     @Test
@@ -231,12 +263,12 @@ class PredictionServiceTest {
 
         List<Prediction> predictions = Arrays.asList(prediction);
 
-        when(predictionRepository.findBySessionSymptomUserId(userId)).thenReturn(predictions);
+        when(predictionRepository.findBySessionSymptomUserIdAndDeletedFalse(userId)).thenReturn(predictions);
 
         List<Prediction> result = predictionService.getPredictionsByUserId(userId);
 
         assertEquals(1, result.size());
-        verify(predictionRepository).findBySessionSymptomUserId(userId);
+        verify(predictionRepository).findBySessionSymptomUserIdAndDeletedFalse(userId);
     }
 
     @Test

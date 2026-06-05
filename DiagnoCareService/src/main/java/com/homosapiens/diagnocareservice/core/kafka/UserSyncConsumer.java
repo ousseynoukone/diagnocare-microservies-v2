@@ -47,6 +47,14 @@ public class UserSyncConsumer {
             // If not found by ID, try to find by email using UserLookupService (handles encrypted email)
             if (user == null && event.getEmail() != null) {
                 user = userLookupService.findUserByEmail(event.getEmail()).orElse(null);
+                
+                // If found by email but with a different ID, delete the old record to avoid unique constraints conflict
+                if (user != null && !user.getId().equals(event.getId())) {
+                    logger.info("Found existing user with email " + event.getEmail() + " but different ID " + user.getId() + ". Deleting old record to sync with new ID " + event.getId());
+                    userRepository.delete(user);
+                    userRepository.flush();
+                    user = null;
+                }
             }
             
             // If still not found, create a new user
