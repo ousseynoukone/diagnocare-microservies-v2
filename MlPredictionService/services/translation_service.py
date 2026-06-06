@@ -36,7 +36,15 @@ class TranslationService:
         
         translations = self.translation_repository.get_translations()
         diseases = translations.get('diseases', {})
-        return diseases.get(disease_name_en, disease_name_en)
+        if disease_name_en in diseases:
+            return diseases[disease_name_en]
+            
+        # Case-insensitive fallback
+        disease_lower = disease_name_en.lower().strip()
+        for k, v in diseases.items():
+            if k.lower().strip() == disease_lower:
+                return v
+        return disease_name_en
     
     def translate_specialist(self, specialist_name_en: str, target_lang: str = 'fr') -> str:
         """
@@ -52,7 +60,15 @@ class TranslationService:
         
         translations = self.translation_repository.get_translations()
         specialists = translations.get('specialists', {})
-        return specialists.get(specialist_name_en, specialist_name_en)
+        if specialist_name_en in specialists:
+            return specialists[specialist_name_en]
+            
+        # Case-insensitive fallback
+        specialist_lower = specialist_name_en.lower().strip()
+        for k, v in specialists.items():
+            if k.lower().strip() == specialist_lower:
+                return v
+        return specialist_name_en
     
     def translate_symptom(self, symptom_name_en: str, target_lang: str = 'fr') -> str:
         """
