@@ -11,6 +11,9 @@ import com.homosapiens.authservice.model.dtos.UserUpdateDto;
 import com.homosapiens.authservice.model.dtos.OtpSendRequest;
 import com.homosapiens.authservice.model.dtos.OtpValidateRequest;
 import com.homosapiens.authservice.model.dtos.ResetPasswordRequestDto;
+import com.homosapiens.authservice.model.dtos.EmailChangeRequestDto;
+import com.homosapiens.authservice.model.dtos.EmailChangeConfirmDto;
+import com.homosapiens.authservice.model.dtos.EmailChangeResendDto;
 import com.homosapiens.authservice.service.AuthService;
 import com.homosapiens.authservice.service.helpers.ValidationHelper;
 import com.homosapiens.authservice.core.locale.LanguageUtil;
@@ -103,6 +106,61 @@ public class AuthController {
         return ResponseEntity.ok(authService.updateUser(id, updateDto));
     }
 
+    @PostMapping("users/email/request-change")
+    @Operation(summary = "Request email change", description = "Verify password and send verification OTP to new email")
+    public ResponseEntity<?> requestEmailChange(
+            @RequestBody @Valid EmailChangeRequestDto request,
+            BindingResult bindingResult,
+            HttpServletRequest httpRequest) {
+        if (bindingResult.hasErrors()) {
+            return ValidationHelper.buildValidationReponse(bindingResult, LanguageUtil.resolveLang(httpRequest));
+        }
+        String lang = LanguageUtil.resolveLang(httpRequest);
+        authService.requestEmailChange(request.getUserId(), request.getNewEmail(), request.getPassword(), lang);
+        return ResponseEntity.ok(
+                CustomResponseEntity.builder()
+                        .statusCode(HttpStatus.OK.value())
+                        .message(LanguageUtil.translateMessage("OTP sent to new email", lang))
+                        .build()
+        );
+    }
+
+    @PostMapping("users/email/resend-change")
+    @Operation(summary = "Resend email change OTP", description = "Resend verification OTP to new email")
+    public ResponseEntity<?> resendEmailChange(
+            @RequestBody @Valid EmailChangeResendDto request,
+            BindingResult bindingResult,
+            HttpServletRequest httpRequest) {
+        if (bindingResult.hasErrors()) {
+            return ValidationHelper.buildValidationReponse(bindingResult, LanguageUtil.resolveLang(httpRequest));
+        }
+        String lang = LanguageUtil.resolveLang(httpRequest);
+        authService.resendEmailChangeOtp(request.getUserId(), request.getNewEmail(), lang);
+        return ResponseEntity.ok(
+                CustomResponseEntity.builder()
+                        .statusCode(HttpStatus.OK.value())
+                        .message(LanguageUtil.translateMessage("OTP resent successfully", lang))
+                        .build()
+        );
+    }
+
+    @PostMapping("users/email/confirm-change")
+    @Operation(summary = "Confirm email change", description = "Validate OTP code and update user's email")
+    public ResponseEntity<?> confirmEmailChange(
+            @RequestBody @Valid EmailChangeConfirmDto request,
+            BindingResult bindingResult,
+            HttpServletRequest httpRequest) {
+        if (bindingResult.hasErrors()) {
+            return ValidationHelper.buildValidationReponse(bindingResult, LanguageUtil.resolveLang(httpRequest));
+        }
+        String lang = LanguageUtil.resolveLang(httpRequest);
+        User updatedUser = authService.confirmEmailChange(request.getUserId(), request.getNewEmail(), request.getCode(), lang);
+        return ResponseEntity.ok(Map.of(
+                "message", LanguageUtil.translateMessage("Email updated successfully", lang),
+                "user", updatedUser
+        ));
+    }
+
     @DeleteMapping("users/{id}")
     @Operation(summary = "Delete user", description = "Delete user account and sync deletion")
     public ResponseEntity<?> deleteUser(@PathVariable Long id) {
@@ -147,7 +205,8 @@ public class AuthController {
             return ValidationHelper.buildValidationReponse(bindingResult, LanguageUtil.resolveLang(httpRequest));
         }
         String lang = LanguageUtil.resolveLang(httpRequest);
-        authService.sendVerificationOtp(request.getEmail(), lang);
+        String purpose = request.getPurpose() != null ? request.getPurpose() : "verification";
+        authService.sendVerificationOtp(request.getEmail(), purpose, lang);
         return ResponseEntity.ok(
                 CustomResponseEntity.builder()
                         .statusCode(HttpStatus.OK.value())

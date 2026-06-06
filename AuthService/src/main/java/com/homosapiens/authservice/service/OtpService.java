@@ -41,6 +41,16 @@ public class OtpService {
 
     @Transactional
     public void sendEmailVerificationOtp(User user, String lang) {
+        sendEmailVerificationOtp(user, "verification", lang);
+    }
+
+    @Transactional
+    public void sendEmailVerificationOtp(User user, String purpose, String lang) {
+        sendEmailVerificationOtp(user, user.getEmail(), purpose, lang);
+    }
+
+    @Transactional
+    public void sendEmailVerificationOtp(User user, String customTargetEmail, String purpose, String lang) {
         cleanupExpiredOtps();
         invalidateActiveOtps(user);
 
@@ -53,32 +63,30 @@ public class OtpService {
 
         String normalizedLang = normalizeLang(lang);
         sendHtmlEmail(
-                user.getEmail(),
-                buildSubject(normalizedLang),
-                buildHtmlBody(normalizedLang, user.getFirstName(), code)
+                customTargetEmail,
+                buildSubject(purpose, normalizedLang),
+                buildHtmlBody(purpose, normalizedLang, user.getFirstName(), code)
         );
     }
 
     @Transactional
     public void sendEmailVerificationOtp(String email, String lang) {
-        // Use UserLookupService to handle encrypted email lookup
-        Optional<User> userOpt = userLookupService.findUserByEmail(email);
-        if (userOpt.isEmpty()) {
-            throw new AppException(HttpStatus.NOT_FOUND, "User not found");
-        }
-        sendEmailVerificationOtp(userOpt.get(), lang);
+        sendEmailVerificationOtp(email, "verification", lang);
     }
 
     @Transactional
-    public void validateEmailOtp(String email, String code) {
-        cleanupExpiredOtps();
+    public void sendEmailVerificationOtp(String email, String purpose, String lang) {
         // Use UserLookupService to handle encrypted email lookup
         Optional<User> userOpt = userLookupService.findUserByEmail(email);
         if (userOpt.isEmpty()) {
             throw new AppException(HttpStatus.NOT_FOUND, "User not found");
         }
-        User user = userOpt.get();
+        sendEmailVerificationOtp(userOpt.get(), purpose, lang);
+    }
 
+    @Transactional
+    public void validateEmailOtp(User user, String code) {
+        cleanupExpiredOtps();
         Otp otp = otpRepository.findTopByUserAndUsedAtIsNullOrderByCreatedAtDesc(user)
                 .orElseThrow(() -> new AppException(HttpStatus.BAD_REQUEST, "OTP not found"));
 
@@ -92,6 +100,19 @@ public class OtpService {
 
         otp.setUsedAt(now);
         otpRepository.save(otp);
+    }
+
+    @Transactional
+    public void validateEmailOtp(String email, String code) {
+        cleanupExpiredOtps();
+        // Use UserLookupService to handle encrypted email lookup
+        Optional<User> userOpt = userLookupService.findUserByEmail(email);
+        if (userOpt.isEmpty()) {
+            throw new AppException(HttpStatus.NOT_FOUND, "User not found");
+        }
+        User user = userOpt.get();
+
+        validateEmailOtp(user, code);
 
         if (!user.isEmailVerified()) {
             user.setEmailVerified(true);
@@ -126,11 +147,13 @@ public class OtpService {
         return "fr";
     }
 
-    private String buildSubject(String lang) {
-        if ("en".equals(lang)) {
-            return "Verify your email";
+    private String buildSubject(String purpose, String lang) {
+        if ("reset_password".equals(purpose)) {
+            return "en".equals(lang) ? "Reset your password" : "Réinitialisation de votre mot de passe";
+        } else if ("email_change".equals(purpose)) {
+            return "en".equals(lang) ? "Confirm email change" : "Confirmation du changement d'adresse email";
         }
-        return "Vérification de votre email";
+        return "en".equals(lang) ? "Verify your email" : "Vérification de votre email";
     }
 
     private void sendHtmlEmail(String to, String subject, String htmlBody) {
@@ -147,18 +170,38 @@ public class OtpService {
         }
     }
 
-    private String buildHtmlBody(String lang, String firstName, String code) {
+    private String buildHtmlBody(String purpose, String lang, String firstName, String code) {
         String safeName = firstName == null || firstName.trim().isEmpty() ? "" : firstName.trim();
         String greeting = "en".equals(lang) ? "Hello" : "Bonjour";
-        String intro = "en".equals(lang)
-                ? "Use the verification code below to confirm your email address."
-                : "Utilisez le code de vérification ci-dessous pour confirmer votre adresse email.";
+        
+        String intro;
+        if ("reset_password".equals(purpose)) {
+            intro = "en".equals(lang)
+                    ? "Use the verification code below to reset your password."
+                    : "Utilisez le code de vérification ci-dessous pour réinitialiser votre mot de passe.";
+        } else if ("email_change".equals(purpose)) {
+            intro = "en".equals(lang)
+                    ? "Use the verification code below to confirm your new email address."
+                    : "Utilisez le code de vérification ci-dessous pour confirmer votre nouvelle adresse email.";
+        } else {
+            intro = "en".equals(lang)
+                    ? "Use the verification code below to confirm your email address."
+                    : "Utilisez le code de vérification ci-dessous pour confirmer votre adresse email.";
+        }
+
         String expires = "en".equals(lang)
                 ? "This code expires in " + expirationMinutes + " minutes."
                 : "Ce code expire dans " + expirationMinutes + " minutes.";
         String support = "en".equals(lang)
                 ? "If you did not request this, you can safely ignore this email."
                 : "Si vous n'êtes pas à l'origine de cette demande, vous pouvez ignorer cet email.";
+
+        String title = "en".equals(lang) ? "Secure verification" : "Vérification sécurisée";
+        if ("reset_password".equals(purpose)) {
+            title = "en".equals(lang) ? "Password Reset" : "Réinitialisation de mot de passe";
+        } else if ("email_change".equals(purpose)) {
+            title = "en".equals(lang) ? "Email Change" : "Changement d'email";
+        }
 
         return "<!DOCTYPE html>"
                 + "<html><head><meta charset=\"UTF-8\"></head>"
@@ -178,7 +221,7 @@ public class OtpService {
                 + "<p style=\"margin:0 0 12px 0;font-size:13px;color:#64748b;\">" + expires + "</p>"
                 + "<p style=\"margin:0;font-size:13px;color:#94a3b8;\">" + support + "</p>"
                 + "</td></tr>"
-                + "<tr><td style=\"padding:16px 28px;background:#f1f5f9;color:#94a3b8;font-size:12px;\">DiagnoCare · Secure verification</td></tr>"
+                + "<tr><td style=\"padding:16px 28px;background:#f1f5f9;color:#94a3b8;font-size:12px;\">DiagnoCare · " + title + "</td></tr>"
                 + "</table>"
                 + "</td></tr>"
                 + "</table>"

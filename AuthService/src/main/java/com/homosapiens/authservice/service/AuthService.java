@@ -148,7 +148,65 @@ public class AuthService {
     }
 
     public void sendVerificationOtp(String email, String lang) {
-        otpService.sendEmailVerificationOtp(email, lang);
+        sendVerificationOtp(email, "verification", lang);
+    }
+
+    public void sendVerificationOtp(String email, String purpose, String lang) {
+        otpService.sendEmailVerificationOtp(email, purpose, lang);
+    }
+
+    public void requestEmailChange(Long id, String newEmail, String password, String lang) {
+        User user = userRepository.findById(id)
+                .orElseThrow(() -> new AppException(HttpStatus.NOT_FOUND, "User not found"));
+
+        if (!passwordEncoder.matches(password, user.getPassword())) {
+            throw new AppException(HttpStatus.UNAUTHORIZED, "Password incorrect");
+        }
+
+        // Check if new email is in use
+        if (userLookupService.existsByEmail(newEmail)) {
+            throw new AppException(HttpStatus.CONFLICT, "Email already in use");
+        }
+
+        // Send OTP directly to the newEmail address, associating it with the current user
+        otpService.sendEmailVerificationOtp(user, newEmail, "email_change", lang);
+    }
+
+    public void resendEmailChangeOtp(Long id, String newEmail, String lang) {
+        User user = userRepository.findById(id)
+                .orElseThrow(() -> new AppException(HttpStatus.NOT_FOUND, "User not found"));
+
+        // Check if new email is in use
+        if (userLookupService.existsByEmail(newEmail)) {
+            throw new AppException(HttpStatus.CONFLICT, "Email already in use");
+        }
+
+        // Send OTP directly to the newEmail address, associating it with the current user
+        otpService.sendEmailVerificationOtp(user, newEmail, "email_change", lang);
+    }
+
+    public User confirmEmailChange(Long id, String newEmail, String code, String lang) {
+        User user = userRepository.findById(id)
+                .orElseThrow(() -> new AppException(HttpStatus.NOT_FOUND, "User not found"));
+
+        // Validate OTP code for this user
+        otpService.validateEmailOtp(user, code);
+
+        // Re-verify email availability
+        if (userLookupService.existsByEmail(newEmail)) {
+            throw new AppException(HttpStatus.CONFLICT, "Email already in use");
+        }
+
+        // Update email address and mark it as verified
+        user.setEmail(newEmail);
+        user.setEmailHash(null);
+        user.setEmailVerified(true);
+        User saved = userRepository.save(user);
+
+        // Sync update via Kafka
+        sendUserEvent(KafkaEvent.USER_UPDATE, saved, true);
+
+        return saved;
     }
 
     public void validateVerificationOtp(String email, String code) {
