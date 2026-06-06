@@ -12,11 +12,24 @@ import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 
+import org.hibernate.annotations.UpdateTimestamp;
+import java.time.LocalDateTime;
+
 @EqualsAndHashCode(callSuper = false)
 @Data
 @Entity
 @Table(name = "users")
-public class User extends BaseEntity{
+public class User {
+
+    @Id
+    private Long id;
+
+    @CreationTimestamp
+    @Column(updatable = false)
+    private LocalDateTime createdDate;
+
+    @UpdateTimestamp
+    private LocalDateTime updatedDate;
 
     @Column(length = 100)
     private String firstName;
@@ -54,11 +67,11 @@ public class User extends BaseEntity{
         // Normalize lang
         if (lang == null || lang.trim().isEmpty()) {
             lang = "fr";
-            return;
-        }
-        lang = lang.trim().toLowerCase();
-        if (!lang.equals("fr") && !lang.equals("en")) {
-            lang = "fr";
+        } else {
+            lang = lang.trim().toLowerCase();
+            if (!lang.equals("fr") && !lang.equals("en")) {
+                lang = "fr";
+            }
         }
 
         // Calculate email hash for uniqueness checks (before encryption)

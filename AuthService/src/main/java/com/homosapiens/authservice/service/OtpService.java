@@ -133,7 +133,7 @@ public class OtpService {
     }
 
     private void cleanupExpiredOtps() {
-        otpRepository.deleteByExpiresAtBefore(new Date());
+        // otpRepository.deleteByExpiresAtBefore(new Date());
     }
 
     private String normalizeLang(String lang) {

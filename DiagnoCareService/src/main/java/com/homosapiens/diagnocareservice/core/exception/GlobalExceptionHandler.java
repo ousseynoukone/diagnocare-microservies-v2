@@ -48,6 +48,7 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(Exception.class)
     public ResponseEntity<CustomResponseEntity> handleGenericException(Exception ex, HttpServletRequest request) {
+        ex.printStackTrace();
         String lang = resolveLang(request);
         CustomResponseEntity response = CustomResponseEntity.builder()
                 .statusCode(HttpStatus.INTERNAL_SERVER_ERROR.value())

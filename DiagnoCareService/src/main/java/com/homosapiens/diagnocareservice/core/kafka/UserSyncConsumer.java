@@ -65,6 +65,7 @@ public class UserSyncConsumer {
             // Update user fields
             user.setId(event.getId());
             user.setEmail(event.getEmail());
+            user.setEmailHash(null);
             user.setFirstName(event.getFirstName());
             user.setLastName(event.getLastName());
             user.setPhoneNumber(event.getPhoneNumber());

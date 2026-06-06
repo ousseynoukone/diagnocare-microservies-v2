@@ -19,7 +19,7 @@ public class PatientMedicalProfileRequestDTO {
 
     @Min(value = 1, message = "L'âge doit être d'au moins 1 an")
     @Max(value = 120, message = "L'âge ne peut pas dépasser 120 ans")
-    private int age;
+    private Integer age;
 
     private GenderEnum gender;
 
@@ -36,7 +36,7 @@ public class PatientMedicalProfileRequestDTO {
     private Float meanCholesterol;
 
     private Boolean sedentary;
-    private int bmi;
+    private Integer bmi;
     private Boolean alcohol;
     private Set<String> familyAntecedents;
 }

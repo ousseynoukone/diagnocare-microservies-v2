@@ -17,6 +17,21 @@ import java.io.IOException;
 public class JwAuthFilter extends OncePerRequestFilter {
     private final JWTAuthProvider jwtAuthProvider;
 
+    private boolean isPublicPath(String path) {
+        if (path == null) {
+            return false;
+        }
+        String normPath = path.startsWith("/") ? path.substring(1) : path;
+        return normPath.startsWith("login")
+                || normPath.startsWith("register")
+                || normPath.startsWith("refresh-token")
+                || normPath.startsWith("validate-token")
+                || normPath.startsWith("otp/")
+                || normPath.startsWith("reset-password")
+                || normPath.startsWith("logout")
+                || normPath.contains("swagger")
+                || normPath.contains("v3/api-docs");
+    }
 
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain) throws ServletException, IOException {
@@ -45,17 +60,25 @@ public class JwAuthFilter extends OncePerRequestFilter {
             try {
                 SecurityContextHolder.getContext().
                         setAuthentication(jwtAuthProvider.validateToken(token));
-            } catch (AppException e) {
-                SecurityContextHolder.clearContext();
-                response.setStatus(HttpStatus.UNAUTHORIZED.value());
-                response.setContentType("application/json");
-                response.getWriter().write("{\"error\": \"" + e.getMessage() + "\"}");
-                return;
             } catch (Exception e) {
                 SecurityContextHolder.clearContext();
-                response.setStatus(HttpStatus.INTERNAL_SERVER_ERROR.value());
-                response.setContentType("application/json");
-                response.getWriter().write("{\"error\": \"" + e.getMessage() + "\"}");
+
+                // If it is a public path, let the request proceed without authentication context
+                String path = request.getServletPath();
+                if (isPublicPath(path)) {
+                    filterChain.doFilter(request, response);
+                    return;
+                }
+
+                if (e instanceof AppException appEx) {
+                    response.setStatus(appEx.getStatus().value());
+                    response.setContentType("application/json");
+                    response.getWriter().write("{\"error\": \"" + appEx.getMessage() + "\"}");
+                } else {
+                    response.setStatus(HttpStatus.INTERNAL_SERVER_ERROR.value());
+                    response.setContentType("application/json");
+                    response.getWriter().write("{\"error\": \"" + e.getMessage() + "\"}");
+                }
                 return;
             }
         }

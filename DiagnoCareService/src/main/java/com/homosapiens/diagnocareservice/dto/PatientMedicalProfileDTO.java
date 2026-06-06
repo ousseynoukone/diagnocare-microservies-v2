@@ -9,13 +9,13 @@ import java.util.Set;
 public class PatientMedicalProfileDTO {
     private Long id;
     private Boolean isSmoking;
-    private int age;
+    private Integer age;
     private GenderEnum gender;
     private Float weight;
     private Float meanBloodPressure;
     private Float meanCholesterol;
     private Boolean sedentary;
-    private int bmi;
+    private Integer bmi;
     private Boolean alcohol;
     private Set<String> familyAntecedents;
     private Long userId;
