@@ -151,6 +151,7 @@ public class PathologyResultServiceImpl implements PathologyResultService {
                 pathologyResult.getPrediction().getId().toString() : null);
         dto.setLocalizedDiseaseName(pathologyResult.getLocalizedDiseaseName());
         dto.setLocalizedSpecialistLabel(pathologyResult.getLocalizedSpecialistLabel());
+        dto.setSpecialistScore(pathologyResult.getDoctor() != null ? pathologyResult.getDoctor().getSpecialistScore() : java.math.BigDecimal.ZERO);
         return dto;
     }
 

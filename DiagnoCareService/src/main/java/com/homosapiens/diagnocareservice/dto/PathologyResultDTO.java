@@ -16,4 +16,5 @@ public class PathologyResultDTO {
     private String predictionId;
     private String localizedDiseaseName;
     private String localizedSpecialistLabel;
+    private BigDecimal specialistScore;
 }
