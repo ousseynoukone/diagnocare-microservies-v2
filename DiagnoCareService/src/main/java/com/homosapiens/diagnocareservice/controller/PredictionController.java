@@ -32,7 +32,6 @@ public class PredictionController {
 
     private final PredictionService predictionService;
     private final PredictionWorkflowService predictionWorkflowService;
-    private final CheckInService checkInService;
 
     @PostMapping
     @Operation(
@@ -56,8 +55,6 @@ public class PredictionController {
         sessionSymptomRequestDTO.setUserId(request.getUserId());
         sessionSymptomRequestDTO.setSymptomLabels(request.getSymptomLabels());
         PredictionCreationResult result = predictionWorkflowService.createPrediction(sessionSymptomRequestDTO, null);
-
-        // Check-in scheduling is now opt-in; user activates via POST /check-ins/activate
 
         PredictionDTO predictionDTO = predictionService.convertToDTO(result.getPrediction());
         PredictionWithResultsResponse response = PredictionWithResultsResponse.builder()

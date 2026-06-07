@@ -47,24 +47,6 @@ public class CheckInServiceImpl implements CheckInService {
 
     @Override
     @Transactional
-    public CheckIn scheduleCheckIn(Prediction prediction) {
-        if (prediction.getPreviousPrediction() != null) {
-            return null;
-        }
-        CheckIn checkIn = new CheckIn();
-        checkIn.setUser(prediction.getSessionSymptom().getUser());
-        checkIn.setPreviousPrediction(prediction);
-        LocalDateTime baseTime = prediction.getCreatedDate() != null
-                ? prediction.getCreatedDate()
-                : LocalDateTime.now();
-        checkIn.setFirstReminderAt(baseTime.plusMinutes(firstReminderMinutes));
-        checkIn.setSecondReminderAt(baseTime.plusMinutes(secondReminderMinutes));
-        checkIn.setStatus(CheckInStatus.PENDING);
-        return checkInRepository.save(checkIn);
-    }
-
-    @Override
-    @Transactional
     public CheckInResponseDTO activateCheckIn(Long predictionId, Long userId) {
         Prediction prediction = predictionService.getPredictionById(predictionId)
                 .orElseThrow(() -> new AppException(HttpStatus.NOT_FOUND, "Prediction not found"));
@@ -76,19 +58,20 @@ public class CheckInServiceImpl implements CheckInService {
             throw new AppException(HttpStatus.FORBIDDEN, "Prediction does not belong to user");
         }
 
-        // Idempotent: return if both check-ins already exist
+        // Idempotent: return if already activated
         List<CheckIn> existing = checkInRepository.findAllByPreviousPredictionIdAndUserId(predictionId, userId);
         if (!existing.isEmpty()) {
             existing.sort(Comparator.comparing(CheckIn::getFirstReminderAt, Comparator.nullsLast(LocalDateTime::compareTo)));
             CheckIn first = existing.get(0);
             CheckInResponseDTO dto = toDto(first, prediction, null);
-            if (existing.size() > 1) {
-                dto.setSecondReminderAt(existing.get(1).getFirstReminderAt());
-            }
+            LocalDateTime j2Time = existing.size() > 1
+                    ? existing.get(1).getFirstReminderAt()
+                    : first.getFirstReminderAt().plusMinutes(firstReminderMinutes);
+            dto.setSecondReminderAt(j2Time);
             return dto;
         }
 
-        // Anchor to prediction creation date so activating late doesn't re-push the windows
+        // J+1 email reminder fires 24h after prediction creation (anchored to prediction, not activation)
         LocalDateTime baseTime = prediction.getCreatedDate() != null
                 ? prediction.getCreatedDate()
                 : LocalDateTime.now();
@@ -100,15 +83,9 @@ public class CheckInServiceImpl implements CheckInService {
         checkIn1.setStatus(CheckInStatus.PENDING);
         CheckIn saved1 = checkInRepository.save(checkIn1);
 
-        CheckIn checkIn2 = new CheckIn();
-        checkIn2.setUser(user);
-        checkIn2.setPreviousPrediction(prediction);
-        checkIn2.setFirstReminderAt(baseTime.plusMinutes(secondReminderMinutes));
-        checkIn2.setStatus(CheckInStatus.PENDING);
-        CheckIn saved2 = checkInRepository.save(checkIn2);
-
+        // J+2 is created when J+1 is submitted — estimate the date for display only
         CheckInResponseDTO dto = toDto(saved1, prediction, null);
-        dto.setSecondReminderAt(saved2.getFirstReminderAt());
+        dto.setSecondReminderAt(saved1.getFirstReminderAt().plusMinutes(firstReminderMinutes));
         return dto;
     }
 
@@ -146,6 +123,19 @@ public class CheckInServiceImpl implements CheckInService {
         checkIn.setCompletedAt(LocalDateTime.now());
 
         CheckIn saved = checkInRepository.save(checkIn);
+
+        // If this was the first (and only) check-in for this prediction, auto-create J+2
+        // J+2 email fires 24h from now, giving the user time to feel the difference
+        List<CheckIn> existing = checkInRepository.findAllByPreviousPredictionIdAndUserId(
+                previousPrediction.getId(), saved.getUser().getId());
+        if (existing.size() == 1) {
+            CheckIn checkIn2 = new CheckIn();
+            checkIn2.setUser(saved.getUser());
+            checkIn2.setPreviousPrediction(previousPrediction);
+            checkIn2.setFirstReminderAt(LocalDateTime.now().plusMinutes(firstReminderMinutes));
+            checkIn2.setStatus(CheckInStatus.PENDING);
+            checkInRepository.save(checkIn2);
+        }
 
         return toDto(saved, previousPrediction, newPrediction);
     }
