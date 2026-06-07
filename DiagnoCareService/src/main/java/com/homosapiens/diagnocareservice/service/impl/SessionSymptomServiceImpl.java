@@ -118,6 +118,7 @@ public class SessionSymptomServiceImpl implements SessionSymptomService {
         
         if (sessionSymptom.getPredictions() != null && !sessionSymptom.getPredictions().isEmpty()) {
             List<Long> predictionIds = sessionSymptom.getPredictions().stream()
+                    .filter(prediction -> !Boolean.TRUE.equals(prediction.getDeleted()))
                     .map(prediction -> prediction.getId())
                     .collect(Collectors.toList());
             dto.setPredictionIds(predictionIds);

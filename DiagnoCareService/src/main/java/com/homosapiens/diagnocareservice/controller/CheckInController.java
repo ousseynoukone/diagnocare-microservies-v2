@@ -1,5 +1,6 @@
 package com.homosapiens.diagnocareservice.controller;
 
+import com.homosapiens.diagnocareservice.dto.CheckInActivateRequestDTO;
 import com.homosapiens.diagnocareservice.dto.CheckInCreateRequestDTO;
 import com.homosapiens.diagnocareservice.dto.CheckInResponseDTO;
 import com.homosapiens.diagnocareservice.service.CheckInService;
@@ -20,6 +21,16 @@ import java.util.List;
 public class CheckInController {
 
     private final CheckInService checkInService;
+
+    @PostMapping("/activate")
+    @Operation(
+            summary = "Activate a health follow-up for a prediction",
+            description = "User explicitly opts in to receive 24h/48h follow-up reminders for a specific prediction."
+    )
+    public ResponseEntity<CheckInResponseDTO> activateCheckIn(@Valid @RequestBody CheckInActivateRequestDTO requestDTO) {
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .body(checkInService.activateCheckIn(requestDTO.getPredictionId(), requestDTO.getUserId()));
+    }
 
     @PostMapping
     @Operation(

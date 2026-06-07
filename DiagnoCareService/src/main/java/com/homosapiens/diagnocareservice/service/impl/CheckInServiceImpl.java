@@ -65,6 +65,37 @@ public class CheckInServiceImpl implements CheckInService {
 
     @Override
     @Transactional
+    public CheckInResponseDTO activateCheckIn(Long predictionId, Long userId) {
+        Prediction prediction = predictionService.getPredictionById(predictionId)
+                .orElseThrow(() -> new AppException(HttpStatus.NOT_FOUND, "Prediction not found"));
+
+        User user = userService.getUserById(userId)
+                .orElseThrow(() -> new AppException(HttpStatus.NOT_FOUND, "User not found"));
+
+        if (!prediction.getSessionSymptom().getUser().getId().equals(user.getId())) {
+            throw new AppException(HttpStatus.FORBIDDEN, "Prediction does not belong to user");
+        }
+
+        // Idempotent: return existing check-in if already activated
+        CheckIn existing = checkInRepository.findByPreviousPredictionIdAndUserId(predictionId, userId).orElse(null);
+        if (existing != null) {
+            Prediction latestChild = resolveLatestChildPrediction(prediction);
+            return toDto(existing, prediction, latestChild);
+        }
+
+        CheckIn checkIn = new CheckIn();
+        checkIn.setUser(user);
+        checkIn.setPreviousPrediction(prediction);
+        LocalDateTime baseTime = LocalDateTime.now();
+        checkIn.setFirstReminderAt(baseTime.plusMinutes(firstReminderMinutes));
+        checkIn.setSecondReminderAt(baseTime.plusMinutes(secondReminderMinutes));
+        checkIn.setStatus(CheckInStatus.PENDING);
+        CheckIn saved = checkInRepository.save(checkIn);
+        return toDto(saved, prediction, null);
+    }
+
+    @Override
+    @Transactional
     public CheckInResponseDTO submitCheckIn(CheckInCreateRequestDTO requestDTO) {
         Prediction previousPrediction = predictionService.getPredictionById(requestDTO.getPreviousPredictionId())
                 .orElseThrow(() -> new AppException(HttpStatus.NOT_FOUND, "Previous prediction not found"));

@@ -57,17 +57,17 @@ public class PathologyResultServiceImpl implements PathologyResultService {
 
         Prediction prediction = null;
         if (predictionId != null) {
-            prediction = predictionRepository.findById(predictionId)
-                    .orElseThrow(() -> new AppException(HttpStatus.NOT_FOUND, 
+            prediction = predictionRepository.findByIdAndDeletedFalse(predictionId)
+                    .orElseThrow(() -> new AppException(HttpStatus.NOT_FOUND,
                             "Prediction not found with id: " + predictionId));
         } else if (requestDTO.getPredictionId() != null && !requestDTO.getPredictionId().isEmpty()) {
             try {
                 Long parsedId = Long.parseLong(requestDTO.getPredictionId());
-                prediction = predictionRepository.findById(parsedId)
-                        .orElseThrow(() -> new AppException(HttpStatus.NOT_FOUND, 
+                prediction = predictionRepository.findByIdAndDeletedFalse(parsedId)
+                        .orElseThrow(() -> new AppException(HttpStatus.NOT_FOUND,
                                 "Prediction not found with id: " + requestDTO.getPredictionId()));
             } catch (NumberFormatException e) {
-                throw new AppException(HttpStatus.BAD_REQUEST, 
+                throw new AppException(HttpStatus.BAD_REQUEST,
                         "Invalid prediction ID format: " + requestDTO.getPredictionId());
             }
         }
@@ -138,7 +138,7 @@ public class PathologyResultServiceImpl implements PathologyResultService {
     @Override
     @Transactional(readOnly = true)
     public List<PathologyResult> getPathologyResultsByPredictionId(Long predictionId) {
-        return pathologyResultRepository.findByPredictionId(predictionId);
+        return pathologyResultRepository.findByPredictionIdAndPredictionDeletedFalse(predictionId);
     }
 
     @Override

@@ -9,6 +9,7 @@ import java.util.List;
 
 public interface CheckInService {
     CheckIn scheduleCheckIn(Prediction prediction);
+    CheckInResponseDTO activateCheckIn(Long predictionId, Long userId);
     CheckInResponseDTO submitCheckIn(CheckInCreateRequestDTO requestDTO);
     List<CheckInResponseDTO> getCheckInsByUser(Long userId);
 }

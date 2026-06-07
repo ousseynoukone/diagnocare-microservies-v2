@@ -10,13 +10,16 @@ import java.util.List;
 import java.util.Optional;
 
 public interface CheckInRepository extends JpaRepository<CheckIn, Long> {
-    List<CheckIn> findByUserId(Long userId);
+
+    @Query("SELECT c FROM CheckIn c WHERE c.user.id = :userId AND c.previousPrediction.deleted = false")
+    List<CheckIn> findByUserId(@Param("userId") Long userId);
 
     Optional<CheckIn> findByPreviousPredictionIdAndUserId(Long previousPredictionId, Long userId);
 
     @Query("""
             select c from CheckIn c
             where c.status <> 'COMPLETED'
+              and c.previousPrediction.deleted = false
               and (
                    (c.firstSentAt is null and c.firstReminderAt is not null and c.firstReminderAt <= :now)
                 or (c.secondSentAt is null and c.secondReminderAt is not null and c.secondReminderAt <= :now)

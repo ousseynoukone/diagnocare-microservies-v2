@@ -57,7 +57,7 @@ public class PredictionController {
         sessionSymptomRequestDTO.setSymptomLabels(request.getSymptomLabels());
         PredictionCreationResult result = predictionWorkflowService.createPrediction(sessionSymptomRequestDTO, null);
 
-        checkInService.scheduleCheckIn(result.getPrediction());
+        // Check-in scheduling is now opt-in; user activates via POST /check-ins/activate
 
         PredictionDTO predictionDTO = predictionService.convertToDTO(result.getPrediction());
         PredictionWithResultsResponse response = PredictionWithResultsResponse.builder()

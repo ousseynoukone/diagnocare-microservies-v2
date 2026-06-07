@@ -15,4 +15,5 @@ public interface PathologyResultRepository extends JpaRepository<PathologyResult
     List<PathologyResult> findByDoctor(Doctor doctor);
     List<PathologyResult> findByPrediction(Prediction prediction);
     List<PathologyResult> findByPredictionId(Long predictionId);
+    List<PathologyResult> findByPredictionIdAndPredictionDeletedFalse(Long predictionId);
 }
