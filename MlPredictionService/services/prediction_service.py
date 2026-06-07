@@ -150,7 +150,7 @@ class PredictionService:
                 disease=disease_name_translated if request.language == 'fr' else disease_name,
                 probability=float(probability * 100),
                 specialist=specialist_name_translated if request.language == 'fr' else specialist_name,
-                specialist_probability=float(specialist_prob * 100),
+                specialist_probability=float(probability * 100),
                 description=explanation
             )
 
