@@ -18,7 +18,6 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.beans.factory.annotation.Value;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -30,6 +29,8 @@ import java.util.List;
 public class CheckInServiceImpl implements CheckInService {
 
     private static final BigDecimal WORSE_THRESHOLD = BigDecimal.valueOf(10.0);
+    private static final String FIRST_REMINDER_KEY = "CHECKIN_FIRST_REMINDER_MINUTES";
+    private static final String SECOND_REMINDER_KEY = "CHECKIN_SECOND_REMINDER_MINUTES";
 
     private final CheckInRepository checkInRepository;
     private final PredictionService predictionService;
@@ -38,12 +39,15 @@ public class CheckInServiceImpl implements CheckInService {
     private final UrgentDiseaseService urgentDiseaseService;
     private final PathologyResultRepository pathologyResultRepository;
     private final com.homosapiens.diagnocareservice.repository.PredictionRepository predictionRepository;
+    private final AppSettingService appSettingService;
 
-    @Value("${app.checkin.first-reminder-minutes:1440}")
-    private long firstReminderMinutes;
+    private long getFirstReminderMinutes() {
+        return Long.parseLong(appSettingService.getValue(FIRST_REMINDER_KEY, "1440"));
+    }
 
-    @Value("${app.checkin.second-reminder-minutes:2880}")
-    private long secondReminderMinutes;
+    private long getSecondReminderMinutes() {
+        return Long.parseLong(appSettingService.getValue(SECOND_REMINDER_KEY, "2880"));
+    }
 
     @Override
     @Transactional
@@ -66,7 +70,7 @@ public class CheckInServiceImpl implements CheckInService {
             CheckInResponseDTO dto = toDto(first, prediction, null);
             LocalDateTime j2Time = existing.size() > 1
                     ? existing.get(1).getFirstReminderAt()
-                    : first.getFirstReminderAt().plusMinutes(firstReminderMinutes);
+                    : first.getFirstReminderAt().plusMinutes(getSecondReminderMinutes());
             dto.setSecondReminderAt(j2Time);
             return dto;
         }
@@ -79,13 +83,13 @@ public class CheckInServiceImpl implements CheckInService {
         CheckIn checkIn1 = new CheckIn();
         checkIn1.setUser(user);
         checkIn1.setPreviousPrediction(prediction);
-        checkIn1.setFirstReminderAt(baseTime.plusMinutes(firstReminderMinutes));
+        checkIn1.setFirstReminderAt(baseTime.plusMinutes(getFirstReminderMinutes()));
         checkIn1.setStatus(CheckInStatus.PENDING);
         CheckIn saved1 = checkInRepository.save(checkIn1);
 
         // J+2 is created when J+1 is submitted — estimate the date for display only
         CheckInResponseDTO dto = toDto(saved1, prediction, null);
-        dto.setSecondReminderAt(saved1.getFirstReminderAt().plusMinutes(firstReminderMinutes));
+        dto.setSecondReminderAt(saved1.getFirstReminderAt().plusMinutes(getSecondReminderMinutes()));
         return dto;
     }
 
@@ -132,7 +136,7 @@ public class CheckInServiceImpl implements CheckInService {
             CheckIn checkIn2 = new CheckIn();
             checkIn2.setUser(saved.getUser());
             checkIn2.setPreviousPrediction(previousPrediction);
-            checkIn2.setFirstReminderAt(LocalDateTime.now().plusMinutes(firstReminderMinutes));
+            checkIn2.setFirstReminderAt(LocalDateTime.now().plusMinutes(getSecondReminderMinutes()));
             checkIn2.setStatus(CheckInStatus.PENDING);
             checkInRepository.save(checkIn2);
         }

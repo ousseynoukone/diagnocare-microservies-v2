@@ -4,10 +4,12 @@ import com.homosapiens.authservice.model.Role;
 import com.homosapiens.authservice.model.enums.RoleEnum;
 import com.homosapiens.authservice.repository.RoleRepository;
 import org.springframework.boot.CommandLineRunner;
+import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
 @Component
+@Order(1)
 public class RoleSeeder implements CommandLineRunner {
 
     private final RoleRepository roleRepository;
