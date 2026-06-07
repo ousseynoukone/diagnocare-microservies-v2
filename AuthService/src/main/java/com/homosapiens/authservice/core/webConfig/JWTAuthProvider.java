@@ -131,7 +131,8 @@ public class JWTAuthProvider {
             userData.put("roles", roles);
             String lang = decoded.getClaim("lang").asString();
             userData.put("lang", lang != null ? lang : "fr");
-            UserDetails userDetails = customUserDetails.loadUserByUsername(decoded.getIssuer());
+            Long userId = decoded.getClaim("id").asLong();
+            UserDetails userDetails = customUserDetails.loadUserById(userId);
 
             return new UsernamePasswordAuthenticationToken(userData, userDetails.getPassword(), userDetails.getAuthorities());
         } catch (JWTVerificationException e) {
@@ -168,7 +169,8 @@ public class JWTAuthProvider {
             userData.put("roles", roles);
             String lang = decoded.getClaim("lang").asString();
             userData.put("lang", lang != null ? lang : "fr");
-            UserDetails userDetails = customUserDetails.loadUserByUsername(decoded.getIssuer());
+            Long userId = decoded.getClaim("id").asLong();
+            UserDetails userDetails = customUserDetails.loadUserById(userId);
 
             return new UsernamePasswordAuthenticationToken(userData, userDetails.getPassword(), userDetails.getAuthorities());
         } catch (JWTVerificationException e) {

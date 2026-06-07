@@ -119,6 +119,7 @@ public class AuthService {
                 throw new AppException(HttpStatus.CONFLICT, "Email already in use");
             }
             user.setEmail(updateDto.getEmail());
+            syncEmailHash(user);
             user.setEmailVerified(false);
             emailChanged = true;
         }
@@ -199,7 +200,7 @@ public class AuthService {
 
         // Update email address and mark it as verified
         user.setEmail(newEmail);
-        user.setEmailHash(null);
+        syncEmailHash(user);
         user.setEmailVerified(true);
         User saved = userRepository.save(user);
 
@@ -229,10 +230,9 @@ public class AuthService {
         Authentication authentication = jwtAuthProvider.validateRefreshToken(refreshToken);
         @SuppressWarnings("unchecked")
         Map<String, Object> details = (Map<String, Object>) authentication.getPrincipal();
-        String email = (String) details.get("email");
+        Long userId = (Long) details.get("id");
 
-        // Use UserLookupService to handle encrypted email lookup
-        Optional<User> userOpt = userLookupService.findUserByEmail(email);
+        Optional<User> userOpt = userRepository.findById(userId);
         if (userOpt.isEmpty()) {
             throw new AppException(HttpStatus.NOT_FOUND, "User not found");
         }
@@ -259,6 +259,14 @@ public class AuthService {
     }
 
     // -------------------- Private Helpers --------------------
+
+    /** Keeps email_hash in sync with the plaintext email after any email change. */
+    private void syncEmailHash(User user) {
+        if (user.getEmail() == null || user.getEmail().isBlank()) {
+            throw new AppException(HttpStatus.BAD_REQUEST, "Email must not be empty");
+        }
+        user.setEmailHash(emailHashService.calculateEmailHash(user.getEmail()));
+    }
 
     private CustomUserDetails buildCustomUserDetails(User u) {
         return CustomUserDetails.builder()

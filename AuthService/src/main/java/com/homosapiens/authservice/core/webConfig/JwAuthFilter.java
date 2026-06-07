@@ -61,6 +61,7 @@ public class JwAuthFilter extends OncePerRequestFilter {
                 SecurityContextHolder.getContext().
                         setAuthentication(jwtAuthProvider.validateToken(token));
             } catch (Exception e) {
+                logger.error("Token validation failed in JwAuthFilter", e);
                 SecurityContextHolder.clearContext();
 
                 // If it is a public path, let the request proceed without authentication context

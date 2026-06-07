@@ -80,6 +80,7 @@ public class PathologyResultServiceImpl implements PathologyResultService {
         pathologyResult.setDescription(requestDTO.getDescription());
         pathologyResult.setLocalizedDiseaseName(requestDTO.getLocalizedDiseaseName());
         pathologyResult.setLocalizedSpecialistLabel(requestDTO.getLocalizedSpecialistLabel());
+        pathologyResult.setSpecialistScore(requestDTO.getSpecialistScore());
 
         return pathologyResultRepository.save(pathologyResult);
     }
@@ -116,6 +117,9 @@ public class PathologyResultServiceImpl implements PathologyResultService {
         if (requestDTO.getLocalizedSpecialistLabel() != null) {
             pathologyResult.setLocalizedSpecialistLabel(requestDTO.getLocalizedSpecialistLabel());
         }
+        if (requestDTO.getSpecialistScore() != null) {
+            pathologyResult.setSpecialistScore(requestDTO.getSpecialistScore());
+        }
 
         return pathologyResultRepository.save(pathologyResult);
     }
@@ -151,7 +155,9 @@ public class PathologyResultServiceImpl implements PathologyResultService {
                 pathologyResult.getPrediction().getId().toString() : null);
         dto.setLocalizedDiseaseName(pathologyResult.getLocalizedDiseaseName());
         dto.setLocalizedSpecialistLabel(pathologyResult.getLocalizedSpecialistLabel());
-        dto.setSpecialistScore(pathologyResult.getDoctor() != null ? pathologyResult.getDoctor().getSpecialistScore() : java.math.BigDecimal.ZERO);
+        dto.setSpecialistScore(pathologyResult.getSpecialistScore() != null 
+                ? pathologyResult.getSpecialistScore() 
+                : (pathologyResult.getDoctor() != null ? pathologyResult.getDoctor().getSpecialistScore() : java.math.BigDecimal.ZERO));
         return dto;
     }
 

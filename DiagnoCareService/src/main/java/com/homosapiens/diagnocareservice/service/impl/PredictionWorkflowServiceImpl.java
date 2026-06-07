@@ -247,6 +247,7 @@ public class PredictionWorkflowServiceImpl implements PredictionWorkflowService 
                         pathologyResultRequest.setDiseaseScore(BigDecimal.valueOf(result.getProbability() != null ? result.getProbability() : 0.0));
                         pathologyResultRequest.setLocalizedDiseaseName(diseaseName);
                         pathologyResultRequest.setLocalizedSpecialistLabel(specialistName);
+                        pathologyResultRequest.setSpecialistScore(BigDecimal.valueOf(result.getSpecialist_probability() != null ? result.getSpecialist_probability() : 0.0));
 
                         String description = result.getDescription();
                         if (description == null || description.isEmpty()) {

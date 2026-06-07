@@ -112,7 +112,7 @@ public class User {
         // Calculate email hash for uniqueness checks (before encryption)
         // Note: This is done in the entity to ensure hash is always set before persistence
         // For lookups, always use UserLookupService.findUserByEmail()
-        if (email != null && emailHash == null) {
+        if (email != null) {
             emailHash = com.homosapiens.authservice.core.util.EmailHashUtil.calculateEmailHash(email);
         }
     }

@@ -32,6 +32,9 @@ public class PathologyResult extends BaseEntity {
     @JoinColumn(name = "medecin_id", nullable = false)
     private Doctor doctor;
 
+    @Column(name = "specialist_score", precision = 10, scale = 2)
+    private BigDecimal specialistScore;
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "id_prediction", nullable = false)
     private Prediction prediction;
