@@ -16,6 +16,8 @@ public interface CheckInRepository extends JpaRepository<CheckIn, Long> {
 
     Optional<CheckIn> findByPreviousPredictionIdAndUserId(Long previousPredictionId, Long userId);
 
+    List<CheckIn> findAllByPreviousPredictionIdAndUserId(Long previousPredictionId, Long userId);
+
     @Query("""
             select c from CheckIn c
             where c.status <> 'COMPLETED'

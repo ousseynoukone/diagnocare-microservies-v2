@@ -8,6 +8,9 @@ import java.util.List;
 
 @Data
 public class CheckInCreateRequestDTO {
+    @NotNull(message = "Check-in ID is required")
+    private Long checkInId;
+
     @NotNull(message = "User ID is required")
     private Long userId;
 

@@ -76,39 +76,59 @@ public class CheckInServiceImpl implements CheckInService {
             throw new AppException(HttpStatus.FORBIDDEN, "Prediction does not belong to user");
         }
 
-        // Idempotent: return existing check-in if already activated
-        CheckIn existing = checkInRepository.findByPreviousPredictionIdAndUserId(predictionId, userId).orElse(null);
-        if (existing != null) {
-            Prediction latestChild = resolveLatestChildPrediction(prediction);
-            return toDto(existing, prediction, latestChild);
+        // Idempotent: return if both check-ins already exist
+        List<CheckIn> existing = checkInRepository.findAllByPreviousPredictionIdAndUserId(predictionId, userId);
+        if (!existing.isEmpty()) {
+            existing.sort(Comparator.comparing(CheckIn::getFirstReminderAt, Comparator.nullsLast(LocalDateTime::compareTo)));
+            CheckIn first = existing.get(0);
+            CheckInResponseDTO dto = toDto(first, prediction, null);
+            if (existing.size() > 1) {
+                dto.setSecondReminderAt(existing.get(1).getFirstReminderAt());
+            }
+            return dto;
         }
 
-        CheckIn checkIn = new CheckIn();
-        checkIn.setUser(user);
-        checkIn.setPreviousPrediction(prediction);
-        LocalDateTime baseTime = LocalDateTime.now();
-        checkIn.setFirstReminderAt(baseTime.plusMinutes(firstReminderMinutes));
-        checkIn.setSecondReminderAt(baseTime.plusMinutes(secondReminderMinutes));
-        checkIn.setStatus(CheckInStatus.PENDING);
-        CheckIn saved = checkInRepository.save(checkIn);
-        return toDto(saved, prediction, null);
+        // Anchor to prediction creation date so activating late doesn't re-push the windows
+        LocalDateTime baseTime = prediction.getCreatedDate() != null
+                ? prediction.getCreatedDate()
+                : LocalDateTime.now();
+
+        CheckIn checkIn1 = new CheckIn();
+        checkIn1.setUser(user);
+        checkIn1.setPreviousPrediction(prediction);
+        checkIn1.setFirstReminderAt(baseTime.plusMinutes(firstReminderMinutes));
+        checkIn1.setStatus(CheckInStatus.PENDING);
+        CheckIn saved1 = checkInRepository.save(checkIn1);
+
+        CheckIn checkIn2 = new CheckIn();
+        checkIn2.setUser(user);
+        checkIn2.setPreviousPrediction(prediction);
+        checkIn2.setFirstReminderAt(baseTime.plusMinutes(secondReminderMinutes));
+        checkIn2.setStatus(CheckInStatus.PENDING);
+        CheckIn saved2 = checkInRepository.save(checkIn2);
+
+        CheckInResponseDTO dto = toDto(saved1, prediction, null);
+        dto.setSecondReminderAt(saved2.getFirstReminderAt());
+        return dto;
     }
 
     @Override
     @Transactional
     public CheckInResponseDTO submitCheckIn(CheckInCreateRequestDTO requestDTO) {
-        Prediction previousPrediction = predictionService.getPredictionById(requestDTO.getPreviousPredictionId())
-                .orElseThrow(() -> new AppException(HttpStatus.NOT_FOUND, "Previous prediction not found"));
+        CheckIn checkIn = checkInRepository.findById(requestDTO.getCheckInId())
+                .orElseThrow(() -> new AppException(HttpStatus.NOT_FOUND, "Check-in not found with id: " + requestDTO.getCheckInId()));
 
-        User user = userService.getUserById(requestDTO.getUserId())
-                .orElseThrow(() -> new AppException(HttpStatus.NOT_FOUND, "User not found"));
-
-        if (!previousPrediction.getSessionSymptom().getUser().getId().equals(user.getId())) {
-            throw new AppException(HttpStatus.BAD_REQUEST, "Prediction does not belong to user");
+        if (!checkIn.getUser().getId().equals(requestDTO.getUserId())) {
+            throw new AppException(HttpStatus.FORBIDDEN, "Check-in does not belong to user");
         }
 
-        CheckIn existingCheckIn = checkInRepository.findByPreviousPredictionIdAndUserId(previousPrediction.getId(), user.getId())
-                .orElse(null);
+        if (checkIn.getStatus() == CheckInStatus.COMPLETED) {
+            Prediction previous = checkIn.getPreviousPrediction();
+            Prediction latestChild = resolveLatestChildPrediction(previous);
+            return toDto(checkIn, previous, latestChild);
+        }
+
+        Prediction previousPrediction = checkIn.getPreviousPrediction();
 
         SessionSymptomRequestDTO symptomRequestDTO = new SessionSymptomRequestDTO();
         symptomRequestDTO.setUserId(requestDTO.getUserId());
@@ -116,10 +136,6 @@ public class CheckInServiceImpl implements CheckInService {
 
         PredictionCreationResult result = predictionWorkflowService.createPrediction(symptomRequestDTO, previousPrediction.getId());
         Prediction newPrediction = result.getPrediction();
-
-        CheckIn checkIn = existingCheckIn != null
-                ? existingCheckIn
-                : createNewCheckIn(user, previousPrediction);
 
         CheckInOutcome outcome = determineOutcome(previousPrediction, newPrediction);
         String worseReason = determineWorseReason(previousPrediction, newPrediction);
@@ -132,14 +148,6 @@ public class CheckInServiceImpl implements CheckInService {
         CheckIn saved = checkInRepository.save(checkIn);
 
         return toDto(saved, previousPrediction, newPrediction);
-    }
-
-    private CheckIn createNewCheckIn(User user, Prediction previousPrediction) {
-        CheckIn created = new CheckIn();
-        created.setUser(user);
-        created.setPreviousPrediction(previousPrediction);
-        created.setStatus(CheckInStatus.PENDING);
-        return created;
     }
 
     @Override
