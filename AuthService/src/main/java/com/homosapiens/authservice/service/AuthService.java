@@ -29,8 +29,10 @@ import org.springframework.stereotype.Service;
 import java.util.Collections;
 import java.util.Date;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 
 @Service
@@ -345,6 +347,11 @@ public class AuthService {
     }
 
     private void sendUserEvent(KafkaEvent event, User user, boolean active) {
+        List<String> roleNames = user.getRoles() == null ? Collections.emptyList() :
+                user.getRoles().stream()
+                        .map(r -> r.getName().name())
+                        .collect(Collectors.toList());
+
         UserSyncEventDTO payload = UserSyncEventDTO.builder()
                 .id(user.getId())
                 .email(user.getEmail())
@@ -353,6 +360,7 @@ public class AuthService {
                 .phoneNumber(user.getPhoneNumber())
                 .lang(user.getLang())
                 .active(active)
+                .roles(roleNames)
                 .build();
         kafkaProducer.sendMessage(event.toString(), String.valueOf(user.getId()), payload);
     }

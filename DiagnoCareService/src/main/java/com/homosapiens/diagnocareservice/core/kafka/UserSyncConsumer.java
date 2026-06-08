@@ -2,7 +2,10 @@ package com.homosapiens.diagnocareservice.core.kafka;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.homosapiens.diagnocareservice.dto.UserSyncEventDTO;
+import com.homosapiens.diagnocareservice.model.entity.Role;
 import com.homosapiens.diagnocareservice.model.entity.User;
+import com.homosapiens.diagnocareservice.model.entity.enums.RoleEnum;
+import com.homosapiens.diagnocareservice.repository.RoleRepository;
 import com.homosapiens.diagnocareservice.repository.UserRepository;
 import com.homosapiens.diagnocareservice.service.UserDataAnonymizationService;
 import com.homosapiens.diagnocareservice.service.UserLookupService;
@@ -11,6 +14,8 @@ import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.stereotype.Service;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.logging.Logger;
 
 @Service
@@ -18,6 +23,7 @@ import java.util.logging.Logger;
 public class UserSyncConsumer {
     private final ObjectMapper objectMapper;
     private final UserRepository userRepository;
+    private final RoleRepository roleRepository;
     private final UserLookupService userLookupService;
     private final UserDataAnonymizationService userDataAnonymizationService;
     private final Logger logger = Logger.getLogger(UserSyncConsumer.class.getName());
@@ -71,6 +77,24 @@ public class UserSyncConsumer {
             user.setPhoneNumber(event.getPhoneNumber());
             user.setLang(event.getLang());
             user.setIsActive(event.getActive() != null ? event.getActive() : true);
+
+            // Sync roles
+            if (event.getRoles() != null && !event.getRoles().isEmpty()) {
+                List<Role> roles = new ArrayList<>();
+                for (String roleName : event.getRoles()) {
+                    try {
+                        RoleEnum roleEnum = RoleEnum.valueOf(roleName);
+                        Role role = roleRepository.findByName(roleEnum);
+                        if (role != null) {
+                            roles.add(role);
+                        }
+                    } catch (IllegalArgumentException e) {
+                        logger.warning("Unknown role in sync event: " + roleName);
+                    }
+                }
+                user.setRoles(roles);
+            }
+
             userRepository.save(user);
         } catch (Exception e) {
             logger.severe("Failed to process user sync event: " + e.getMessage());
