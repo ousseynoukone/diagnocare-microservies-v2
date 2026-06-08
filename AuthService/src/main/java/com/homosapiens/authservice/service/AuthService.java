@@ -8,10 +8,13 @@ import com.homosapiens.authservice.core.webConfig.JWTAuthProvider;
 import com.homosapiens.authservice.model.Role;
 import com.homosapiens.authservice.model.User;
 import com.homosapiens.authservice.model.dtos.CustomUserDetails;
+import com.homosapiens.authservice.model.dtos.AdminCreateDto;
+import com.homosapiens.authservice.model.dtos.ChangePasswordDto;
 import com.homosapiens.authservice.model.dtos.UserLoginDto;
 import com.homosapiens.authservice.model.dtos.UserRegisterDto;
 import com.homosapiens.authservice.model.dtos.UserSyncEventDTO;
 import com.homosapiens.authservice.model.dtos.UserUpdateDto;
+import com.homosapiens.authservice.model.enums.RoleEnum;
 import com.homosapiens.authservice.model.mapper.UserMapper;
 import com.homosapiens.authservice.repository.RoleRepository;
 import com.homosapiens.authservice.repository.UserRepository;
@@ -23,6 +26,7 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
+import java.util.Collections;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
@@ -103,6 +107,36 @@ public class AuthService {
         realUser.setConsentVersion(consentVersion);
         User saved = userRepository.save(realUser);
         otpService.sendEmailVerificationOtp(saved, saved.getLang());
+        sendUserEvent(KafkaEvent.USER_REGISTERED, saved, true);
+        return saved;
+    }
+
+    public User createAdmin(AdminCreateDto dto) {
+        Role role = roleRepository.findById(dto.getRoleId())
+                .orElseThrow(() -> new AppException(HttpStatus.NOT_FOUND, "Role not found"));
+
+        if (role.getName() == RoleEnum.SUPER_ADMIN || role.getName() == RoleEnum.PATIENT) {
+            throw new AppException(HttpStatus.FORBIDDEN, "Cannot assign SUPER_ADMIN or PATIENT role through this endpoint");
+        }
+
+        if (userLookupService.existsByEmail(dto.getEmail())) {
+            throw new AppException(HttpStatus.CONFLICT, "Email already in use");
+        }
+
+        User user = new User();
+        user.setEmail(dto.getEmail());
+        user.setFirstName(dto.getFirstName());
+        user.setLastName(dto.getLastName());
+        user.setPassword(passwordEncoder.encode(dto.getPassword()));
+        user.setRoles(Collections.singletonList(role));
+        user.setEmailVerified(true);
+        user.setPrivacyPolicyAccepted(true);
+        user.setTermsAccepted(true);
+        user.setConsentDate(new Date());
+        user.setConsentVersion(consentVersion);
+        user.setLang("fr");
+
+        User saved = userRepository.save(user);
         sendUserEvent(KafkaEvent.USER_REGISTERED, saved, true);
         return saved;
     }
@@ -212,6 +246,25 @@ public class AuthService {
 
     public void validateVerificationOtp(String email, String code) {
         otpService.validateEmailOtp(email, code);
+    }
+
+    public void setUserPassword(Long targetId, String newPassword) {
+        User user = userRepository.findById(targetId)
+                .orElseThrow(() -> new AppException(HttpStatus.NOT_FOUND, "User not found"));
+        user.setPassword(passwordEncoder.encode(newPassword));
+        userRepository.save(user);
+        sendUserEvent(KafkaEvent.USER_UPDATE, user, true);
+    }
+
+    public void changePassword(Long userId, ChangePasswordDto dto) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new AppException(HttpStatus.NOT_FOUND, "User not found"));
+        if (!passwordEncoder.matches(dto.getCurrentPassword(), user.getPassword())) {
+            throw new AppException(HttpStatus.UNAUTHORIZED, "Current password is incorrect");
+        }
+        user.setPassword(passwordEncoder.encode(dto.getNewPassword()));
+        userRepository.save(user);
+        sendUserEvent(KafkaEvent.USER_UPDATE, user, true);
     }
 
     public void deleteUser(Long id) {

@@ -5,6 +5,9 @@ import com.homosapiens.authservice.core.exception.entity.CustomResponseEntity;
 import com.homosapiens.authservice.core.kafka.KafkaProducer;
 import com.homosapiens.authservice.core.kafka.eventEnums.KafkaEvent;
 import com.homosapiens.authservice.model.User;
+import com.homosapiens.authservice.model.dtos.AdminCreateDto;
+import com.homosapiens.authservice.model.dtos.AdminSetPasswordDto;
+import com.homosapiens.authservice.model.dtos.ChangePasswordDto;
 import com.homosapiens.authservice.model.dtos.UserLoginDto;
 import com.homosapiens.authservice.model.dtos.UserRegisterDto;
 import com.homosapiens.authservice.model.dtos.UserUpdateDto;
@@ -22,6 +25,7 @@ import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import jakarta.servlet.http.Cookie;
+import org.springframework.security.core.Authentication;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
@@ -90,6 +94,89 @@ public class AuthController {
                 CustomResponseEntity.builder()
                         .statusCode(HttpStatus.INTERNAL_SERVER_ERROR.value())
                         .message(LanguageUtil.translateMessage("CHEEZ BRO , UR CODES ARE A MESS ! THIS IS SUCH A MASTERPIECE OF SHIT", LanguageUtil.resolveLang(request)))
+        );
+    }
+
+    @PostMapping("admin-register")
+    @Operation(summary = "Create admin account", description = "SUPER_ADMIN only — creates a pre-verified admin/doctor/operator account without OTP")
+    public ResponseEntity<?> createAdminAccount(
+            @RequestBody @Valid AdminCreateDto dto,
+            BindingResult bindingResult,
+            Authentication authentication,
+            HttpServletRequest request) {
+
+        if (bindingResult.hasErrors()) {
+            return ValidationHelper.buildValidationReponse(bindingResult, LanguageUtil.resolveLang(request));
+        }
+
+        boolean isSuperAdmin = authentication != null && authentication.getAuthorities().stream()
+                .anyMatch(a -> "SUPER_ADMIN".equals(a.getAuthority()));
+        if (!isSuperAdmin) {
+            throw new AppException(HttpStatus.FORBIDDEN, "Only Super Admin can create admin accounts");
+        }
+
+        User created = authService.createAdmin(dto);
+        return ResponseEntity.status(HttpStatus.CREATED).body(created);
+    }
+
+    @PutMapping("admin/users/{id}/set-password")
+    @Operation(summary = "Force-reset a user's password", description = "SUPER_ADMIN only — sets a new password without requiring the current one")
+    public ResponseEntity<?> setUserPassword(
+            @PathVariable Long id,
+            @RequestBody @Valid AdminSetPasswordDto dto,
+            BindingResult bindingResult,
+            Authentication authentication,
+            HttpServletRequest request) {
+
+        if (bindingResult.hasErrors()) {
+            return ValidationHelper.buildValidationReponse(bindingResult, LanguageUtil.resolveLang(request));
+        }
+
+        boolean isSuperAdmin = authentication != null && authentication.getAuthorities().stream()
+                .anyMatch(a -> "SUPER_ADMIN".equals(a.getAuthority()));
+        if (!isSuperAdmin) {
+            throw new AppException(HttpStatus.FORBIDDEN, "Only Super Admin can reset passwords");
+        }
+
+        authService.setUserPassword(id, dto.getNewPassword());
+        return ResponseEntity.ok(
+                CustomResponseEntity.builder()
+                        .statusCode(HttpStatus.OK.value())
+                        .message("Password updated successfully")
+                        .build()
+        );
+    }
+
+    @PutMapping("users/{id}/change-password")
+    @Operation(summary = "Change own password", description = "Authenticated user changes their own password — current password required")
+    public ResponseEntity<?> changePassword(
+            @PathVariable Long id,
+            @RequestBody @Valid ChangePasswordDto dto,
+            BindingResult bindingResult,
+            Authentication authentication,
+            HttpServletRequest request) {
+
+        if (bindingResult.hasErrors()) {
+            return ValidationHelper.buildValidationReponse(bindingResult, LanguageUtil.resolveLang(request));
+        }
+
+        if (authentication == null) {
+            throw new AppException(HttpStatus.UNAUTHORIZED, "Authentication required");
+        }
+
+        @SuppressWarnings("unchecked")
+        Map<String, Object> principal = (Map<String, Object>) authentication.getPrincipal();
+        Long callerId = (Long) principal.get("id");
+        if (!callerId.equals(id)) {
+            throw new AppException(HttpStatus.FORBIDDEN, "You can only change your own password");
+        }
+
+        authService.changePassword(id, dto);
+        return ResponseEntity.ok(
+                CustomResponseEntity.builder()
+                        .statusCode(HttpStatus.OK.value())
+                        .message("Password changed successfully")
+                        .build()
         );
     }
 
