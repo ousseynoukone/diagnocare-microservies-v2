@@ -15,19 +15,19 @@ public class PatientMedicalProfile {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column
+    @Column(columnDefinition = "TEXT")
     @Convert(converter = EncryptedBooleanConverter.class)
     private Boolean isSmoking;
 
-    @Column
+    @Column(columnDefinition = "TEXT")
     @Convert(converter = EncryptedIntegerConverter.class)
     private Integer age;
 
-    @Column(length = 255)
+    @Column(columnDefinition = "TEXT")
     @Convert(converter = EncryptedGenderEnumConverter.class)
     private GenderEnum gender;
 
-    @Column
+    @Column(columnDefinition = "TEXT")
     @Convert(converter = EncryptedFloatConverter.class)
     private Float weight;
 
@@ -35,23 +35,23 @@ public class PatientMedicalProfile {
     @JoinColumn(name = "user_id", nullable = false)
     private User user;
 
-    @Column(nullable = true , name = "mean_bp")
+    @Column(nullable = true, name = "mean_bp", columnDefinition = "TEXT")
     @Convert(converter = EncryptedFloatConverter.class)
     private Float meanBloodPressure;
 
-    @Column(nullable = true , name = "mean_chol")
+    @Column(nullable = true, name = "mean_chol", columnDefinition = "TEXT")
     @Convert(converter = EncryptedFloatConverter.class)
     private Float meanCholesterol;
 
-    @Column
+    @Column(columnDefinition = "TEXT")
     @Convert(converter = EncryptedBooleanConverter.class)
     private Boolean sedentary;
 
-    @Column
+    @Column(columnDefinition = "TEXT")
     @Convert(converter = EncryptedIntegerConverter.class)
     private Integer bmi;
 
-    @Column
+    @Column(columnDefinition = "TEXT")
     @Convert(converter = EncryptedBooleanConverter.class)
     private Boolean alcohol;
 
