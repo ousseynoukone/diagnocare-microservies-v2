@@ -1,91 +1,121 @@
-# 🏥 Diagnocare – Intelligent Healthcare Microservices Platform
+# Diagnocare – Plateforme de Santé Intelligente (Microservices)
 
-Diagnocare is a microservices-based healthcare platform built with **Spring Boot**, **Apache Kafka**, and **PostgreSQL**. It includes user authentication, symptom analysis, disease prediction, online consultations, and more.
+Diagnocare est une plateforme de santé basée sur une architecture microservices, construite avec **Spring Boot**, **Apache Kafka** et **PostgreSQL**. Elle intègre l'authentification sécurisée des utilisateurs, l'analyse de symptômes, la prédiction de maladies par apprentissage automatique, ainsi que la gestion des consultations médicales.
 
 ---
 
-## 🧭 Microservices Architecture
+## Architecture des Microservices
 
 ```mermaid
 graph TD
-    Browser[Web Browser / React Client] <-->|HttpOnly Cookies| Gateway[Gateway Service: 8765]
+    Browser[Navigateur Web / Client React] <-->|Cookies HttpOnly| Gateway[Gateway Service : 8765]
     
-    Gateway -->|Forward Public Requests| AuthService[Auth Service: 8081]
-    Gateway -->|Filter & Forward with Bearer| DiagnoService[DiagnoCare Service: 8080]
+    Gateway -->|Requêtes publiques| AuthService[Auth Service : 8081]
+    Gateway -->|Filtrage + Bearer Token| DiagnoService[DiagnoCare Service : 8080]
     
-    AuthService <-->|Read/Write Cookies| AuthDB[(Auth Database)]
-    DiagnoService <-->|Query Data| DiagnoDB[(DiagnoCare Database)]
+    AuthService <-->|Lecture/Écriture| AuthDB[(Base Auth)]
+    DiagnoService <-->|Requêtes données| DiagnoDB[(Base DiagnoCare)]
     
-    AuthService -.->|Publish events| Kafka[Kafka Broker: 29092]
-    DiagnoService -.->|Subscribe/Publish| Kafka
+    AuthService -.->|Publication d'événements| Kafka[Kafka Broker : 29092]
+    DiagnoService -.->|Abonnement/Publication| Kafka
     
-    Registry[Eureka Registry: 8761] <-->|Service Discovery| Gateway
-    Registry <-->|Service Discovery| AuthService
-    Registry <-->|Service Discovery| DiagnoService
+    Registry[Eureka Registry : 8761] <-->|Découverte de services| Gateway
+    Registry <-->|Découverte de services| AuthService
+    Registry <-->|Découverte de services| DiagnoService
 ```
 
-### Core Services:
+### Services principaux
 
-| Service Name | Port | Description |
+| Service | Port | Rôle |
 | :--- | :--- | :--- |
-| `registry-service` | `8761` | Eureka Server for dynamic service registration and discovery |
-| `gateway-service` | **`8765`** | API Gateway (routes all public requests, intercepts auth state) |
-| `auth-service` | `8081` | Handles registrations, logins, verification codes, GDPR, and JWT issuance |
-| `diagnocare-service` | `8080` | Core medical logic, appointments, symptom mapping, and prediction |
-| `ml-prediction-service` | `5000` | Python Flask microservice exposing machine learning model predictions |
-| `auth-db` / `diagnocare-db` | `5432` | Dedicated PostgreSQL database containers |
-| `kafka-broker` | `29092` | Event broker for asynchronous inter-service synchronization |
-| `kafka-ui` | `8083` | Web dashboard for monitoring Kafka topics and queues |
+| `registry-service` | `8761` | Serveur Eureka – enregistrement et découverte dynamique des services |
+| `gateway-service` | **`8765`** | Passerelle API – routage, filtrage et gestion de la session |
+| `auth-service` | `8081` | Inscription, connexion, codes OTP, conformité RGPD, émission de JWT |
+| `diagnocare-service` | `8080` | Logique médicale principale : rendez-vous, symptômes, prédictions |
+| `ml-prediction-service` | `5000` | Microservice Python/Flask exposant les prédictions du modèle ML |
+| `auth-db` / `diagnocare-db` | `5432` | Conteneurs PostgreSQL dédiés à chaque service |
+| `kafka-broker` | `29092` | Broker d'événements pour la synchronisation asynchrone inter-services |
+| `kafka-ui` | `8083` | Interface web de supervision des topics et files Kafka |
 
 ---
 
-## 🔐 Authentication & Session System (HttpOnly Cookies)
+## Authentification & Gestion de Session (Cookies HttpOnly)
 
-To prevent Cross-Site Scripting (XSS) and maximize security, the platform does **not** expose JWT tokens to client-side JavaScript. Instead, it uses **HttpOnly, SameSite=Lax cookies**.
+Pour prévenir les attaques XSS et maximiser la sécurité, la plateforme **n'expose jamais les tokens JWT au JavaScript côté client**. La session repose exclusivement sur des **cookies HttpOnly, SameSite=Lax**.
 
-### How it works:
+### Fonctionnement
 
-1. **Authentication:**
-   * When a user logs in via `POST /api/v1/auth/login`, `AuthService` issues an access token and a refresh token.
-   * Instead of returning them in the response body, `AuthService` sends them back in `Set-Cookie` headers:
-     * `token` (Short-lived JWT access token, `HttpOnly`, `Path=/`, `SameSite=Lax`)
-     * `refreshToken` (Long-lived JWT refresh token, `HttpOnly`, `Path=/`, `SameSite=Lax`)
+1. **Connexion**
+   - Lors d'un appel `POST /api/v1/auth/login`, l'`AuthService` génère un token d'accès et un token de rafraîchissement.
+   - Ces tokens sont transmis dans les en-têtes `Set-Cookie` de la réponse :
+     - `token` – JWT d'accès à courte durée de vie (`HttpOnly`, `Path=/`, `SameSite=Lax`)
+     - `refreshToken` – JWT de rafraîchissement à longue durée de vie (`HttpOnly`, `Path=/`, `SameSite=Lax`)
 
-2. **API Gateway Interception (`AuthFilter`):**
-   * For private microservices (e.g., `/api/v1/diagnocare/**`), requests go through the Gateway's `AuthFilter`.
-   * The `AuthFilter` extracts the `token` cookie, mutates the incoming request to inject a synthetic `Authorization: Bearer <token>` header, and validates it against `AuthService` before letting the request proceed downstream.
+2. **Interception par la passerelle (`AuthFilter`)**
+   - Pour les routes privées (ex. `/api/v1/diagnocare/**`), la requête transite par l'`AuthFilter` de la Gateway.
+   - Ce filtre extrait le cookie `token`, injecte un en-tête synthétique `Authorization: Bearer <token>`, et valide le token auprès de l'`AuthService` avant de laisser passer la requête.
 
-3. **Auth-Service Fallback (`JwAuthFilter`):**
-   * Public endpoints (`/login`, `/register`, `/otp/*`) bypass token validation.
-   * For protected endpoints directly inside `AuthService` (e.g., editing user details), the service's internal `JwAuthFilter` checks the `Authorization` header first, falling back to reading the `token` cookie if the header is missing.
+3. **Filtre interne de l'Auth Service (`JwAuthFilter`)**
+   - Les endpoints publics (`/login`, `/register`, `/otp/*`) contournent la validation.
+   - Pour les endpoints protégés internes à l'`AuthService`, le filtre `JwAuthFilter` lit d'abord l'en-tête `Authorization`, puis se rabat sur le cookie `token` si l'en-tête est absent.
 
-4. **Token Refreshing:**
-   * When the access token expires, the client calls `POST /api/v1/auth/refresh-token`.
-   * The browser automatically attaches the `refreshToken` cookie. The endpoint validates it and updates the access token `token` cookie on the fly.
+4. **Rafraîchissement du token**
+   - À l'expiration du token d'accès, le client appelle `POST /api/v1/auth/refresh-token`.
+   - Le navigateur joint automatiquement le cookie `refreshToken`. L'endpoint le valide et met à jour le cookie `token` à la volée.
 
-5. **Logout:**
-   * Calling `POST /api/v1/auth/logout` immediately resets the expiration time of both the `token` and `refreshToken` cookies to `0`, prompting the browser to destroy them.
-
----
-
-## 🌐 CORS Configuration
-
-Because credentials (cookies) are enabled, the Gateway's `CorsConfig` is strictly configured:
-* Wildcard origins (`*`) are disallowed.
-* Origins are locked down to specific frontend locations (e.g. `http://localhost:5173`).
-* `allowCredentials(true)` is explicitly enabled to allow cookie transfers.
-* `Set-Cookie` is exposed to allow the browser to save updated session keys.
+5. **Déconnexion**
+   - Un appel `POST /api/v1/auth/logout` remet immédiatement la durée de vie des cookies `token` et `refreshToken` à `0`, ce qui ordonne au navigateur de les supprimer.
 
 ---
 
-## ⚙️ How to Run
+## Configuration CORS
 
-1. Create a `.env` file from the template `.env-exemple`.
-2. Spin up all infrastructure and code services using Docker Compose:
+Parce que les credentials (cookies) sont activés, la configuration CORS de la Gateway est strictement restreinte :
+- Les origines avec wildcard (`*`) sont interdites.
+- Les origines autorisées sont explicitement listées (ex. `http://localhost:5173`).
+- `allowCredentials(true)` est activé pour permettre le transfert des cookies.
+- L'en-tête `Set-Cookie` est exposé pour que le navigateur puisse sauvegarder les nouvelles clés de session.
+
+---
+
+## Lancement
+
+1. Copier le fichier de configuration depuis le modèle :
+   ```bash
+   cp .env-exemple .env
+   ```
+   Puis renseigner les variables (identifiants de bases de données, secrets JWT, etc.).
+
+2. Démarrer tous les services avec Docker Compose :
    ```bash
    docker compose up -d
    ```
-3. Monitor logs for individual containers:
+
+3. Suivre les logs d'un service en particulier :
    ```bash
    docker compose logs -f auth-service
    ```
+
+### Accès aux interfaces
+
+| Interface | URL |
+| :--- | :--- |
+| Eureka Dashboard | http://localhost:8761 |
+| Kafka UI | http://localhost:8083 |
+| API Gateway | http://localhost:8765 |
+
+---
+
+## Structure du projet
+
+```
+diagnocare-microservies-v2/
+├── AuthService/            # Service d'authentification (Spring Boot)
+├── DiagnoCareService/      # Service médical principal (Spring Boot)
+├── GatewayService/         # Passerelle API (Spring Cloud Gateway)
+├── RegistryService/        # Registre de services (Eureka)
+├── MlPredictionService/    # Service de prédiction ML (Python / Flask)
+├── docs/                   # Documentation technique et politique de confidentialité
+├── docker-compose.yml      # Orchestration des conteneurs
+└── .env-exemple            # Modèle de variables d'environnement
+```
