@@ -47,9 +47,6 @@ import java.util.stream.Collectors;
 public class AuthController {
     private final AuthService authService;
 
-    @Value("${security.jwt.token.expiration:3600000}")
-    private long accessTokenExpiration;
-
     @Value("${security.jwt.token.refresh-expiration:86400000}")
     private long refreshTokenExpiration;
 
@@ -367,11 +364,11 @@ public class AuthController {
      * JavaScript cannot read these cookies, protecting them from XSS attacks.
      */
     private void setTokenCookies(HttpServletResponse response, String token, String refreshToken) {
-        int accessMaxAge  = (int) (accessTokenExpiration  / 1000); // ms → seconds
-        int refreshMaxAge = (int) (refreshTokenExpiration / 1000);
+        int refreshMaxAge    = (int) (refreshTokenExpiration / 1000);
+        int tokenCookieMaxAge = refreshMaxAge + (24 * 60 * 60); // refresh duration + 24h extra
 
         response.addHeader(HttpHeaders.SET_COOKIE,
-                buildCookie("token", token, accessMaxAge));
+                buildCookie("token", token, tokenCookieMaxAge));
         response.addHeader(HttpHeaders.SET_COOKIE,
                 buildCookie("refreshToken", refreshToken, refreshMaxAge));
     }

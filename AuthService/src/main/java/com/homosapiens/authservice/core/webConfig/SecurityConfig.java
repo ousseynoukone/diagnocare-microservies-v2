@@ -1,5 +1,6 @@
 package com.homosapiens.authservice.core.webConfig;
 
+import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
@@ -33,6 +34,13 @@ public class SecurityConfig {
                             .requestMatchers(HttpMethod.POST,"/login", "/validate-token", "/register","/refresh-token","/otp/send", "/otp/validate", "/reset-password", "/logout").permitAll()
                             .requestMatchers(HttpMethod.GET, "/roles/**").permitAll()
                             .anyRequest().authenticated())
+                    .exceptionHandling(ex -> ex.authenticationEntryPoint(
+                            (request, response, authException) -> {
+                                response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+                                response.setContentType("application/json");
+                                response.getWriter().write("{\"statusCode\":401,\"message\":\"Authentication required\"}");
+                            }
+                    ))
                     .logout(logout -> logout.disable());
 
             return  http.build();
